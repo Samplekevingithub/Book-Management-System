@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Book Management System</title>
+    <style>
+        body {
+            margin: 4rem;
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+        }
+
+        #formContainer {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .form-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 50%;
+            max-width: 600px;
+            margin: 10px;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin: 20px 0;
+            width: 100%;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: #fff;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        .section-heading {
+            color: #4CAF50;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        [type=submit]:not(:disabled), button:not(:disabled) {
+            cursor: pointer;
+            margin: 5px;
+        }
+    </style>
+     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+
+</head>
+
+<body>  
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="#">Book Management System</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+              <li class="nav-item">
+                <a class="nav-link active" aria-current="page" href="/">Home</a>
+              </li>
+              
+              {% if current_user.is_authenticated %}
+              <li class="nav-item">
+                <a class="nav-link" href="/logout">Logout</a>
+              </li>
+              {% else %}
+              <li class="nav-item">
+                <a class="nav-link" href="/login">Logout</a>
+              </li>
+          
+              {% endif %}
+            </div>
+        </div>
+      </nav>
+      {% if message %}
+      <div>{{ message }}</div>
+  {% endif %}
+  
+    <!-- <nav>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="{{url_for('login_page')}}">Login</a></li>
+            <li><a href="{{url_for('register_page')}}">Register</a></li>
+            {% if current_user.is_authenticated %}
+                <li><a href="/logout">Logout</a></li>
+            {% endif %}
+        </ul>
+    </nav> -->
+
+    <!-- Your existing content -->
+    <!-- Remember to replace the Flask URL routes ("/", "/login", "/register", "/logout") with appropriate URLs according to your Flask application -->
+    <!-- <h1>Login Authentication System in Flask.</h1>
+        <a href="{{url_for('login_page')}}">Login page</a><br>
+        <a href="{{url_for('register_page')}}">Register page</a> -->
+        <!-- <a href="{{url_for('login_page')}}">Login page</a><br>
+        <a href="{{url_for('register_page')}}">Register page</a>
+    {% if current_user.is_authenticated %}
+    <h1>You are logged in</h1>
+    <a href="/logout">Logout</a>
+    {% else %}
+    <h1>You are not logged in</h1>
+    {% endif %}
+    <h1>Book Management System</h1> -->
+
+    <div id="formContainer">
+        <div class="form-container">
+            <h2 class="section-heading">Add New Book</h2>
+            <form method="POST" action="/add_book">
+                <label for="title">Title:</label>
+                <input type="text" id="title" name="title" placeholder="Enter book title">
+                <label for="author">Author:</label>
+                <input type="text" id="author" name="author" placeholder="Enter author name">
+                <label for="published_date">Published Date:</label>
+                <input type="date" id="published_date" name="published_date">
+                <label for="isbn">ISBN:</label>
+                <input type="text" id="isbn" name="isbn" placeholder="Enter ISBN">
+                <label for="num_pages">Number of Pages:</label>
+                <input type="number" id="num_pages" name="num_pages" placeholder="Enter number of pages">
+                <label for="cover_image_url">Cover Image URL:</label>
+                <input type="text" id="cover_image_url" name="cover_image_url" placeholder="Enter cover image URL">
+                <button type="submit">Add Book</button>
+            </form>
+        </div>
+
+        <div class="form-container">
+            <h2 class="section-heading">Update Book</h2>
+            <form id="updateBookForm"  style="display:none;" onsubmit="event.preventDefault(); updateBook();">
+                <input type="hidden" id="bookIdInputUpdate">
+                <label for="titleInputUpdate">Title:</label>
+                <input type="text" id="titleInputUpdate">
+                <label for="authorInputUpdate">Author:</label>
+                <input type="text" id="authorInputUpdate">
+                <label for="publishedDateInputUpdate">Published Date:</label>
+                <input type="date" id="publishedDateInputUpdate">
+                <label for="isbnInputUpdate">ISBN:</label>
+                <input type="text" id="isbnInputUpdate">
+                <label for="numPagesInputUpdate">Number of Pages:</label>
+                <input type="number" id="numPagesInputUpdate">
+                <label for="coverImageURLInputUpdate">Cover Image URL:</label>
+                <input type="text" id="coverImageURLInputUpdate">
+                <button type="submit">Update Book</button>
+            </form>
+        </div>
+    </div>
+
+
+
+    <table id="outputTable">
+        <tr>
+            <th>Id</th>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Published Date</th>
+            <th>ISBN</th>
+            <th>Number of Pages</th>
+            <th>Cover Image URL</th>
+            <th>Action</th>
+        </tr>
+        {% for book in books %}
+        <tr data-id="{{ book.id }}">
+            <td>{{ book.id }}</td>
+            <td>{{ book.title }}</td>
+            <td>{{ book.author }}</td>
+            <td>{{ book.published_date }}</td>
+            <td>{{ book.isbn }}</td>
+            <td>{{ book.num_pages }}</td>
+            <td><img src="{{ book.cover_image_url }}" width="100" alt="Cover Image"></td>
+            <!-- <td>{{ book.cover_image_url }}</td> -->
+            <!-- <td><button onclick="deleteBook({{ book.id }})">Delete</button></td> -->
+            <td>
+                <button onclick="deleteBook({{ book.id }})">Delete</button>
+                <button onclick="fillUpdateForm({{ book.id }})">Update</button> <!-- Update button -->
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <script>
+     
+     function addBook() {
+        let title = document.getElementById("titleInput").value;
+        let author = document.getElementById("authorInput").value;
+        let publishedDate = document.getElementById("publishedDateInput").value;
+        let isbn = document.getElementById("isbnInput").value;
+        let numPages = document.getElementById("numPagesInput").value;
+        let coverImageURL = document.getElementById("coverImageURLInput").value;
+
+        let formData = {
+            title: title,
+            author: author,
+            published_date: publishedDate,
+            isbn: isbn,
+            num_pages: numPages,
+            cover_image_url: coverImageURL || ""
+        };
+
+        // Make an AJAX request to add the book to the server
+        fetch('/add_book', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            // If the addition was successful, dynamically add the new book to the table
+            let table = document.getElementById("outputTable");
+            let newRow = table.insertRow();
+
+            newRow.innerHTML = `
+                <td>${data.id}</td>
+                <td>${title}</td>
+                <td>${author}</td>
+                <td>${publishedDate}</td>
+                <td>${isbn}</td>
+                <td>${numPages}</td>
+                <td><img src="${coverImageURL}" width="100" alt="Cover Image"></td> 
+                <td>
+                <button onclick="deleteBook(${data.id})">Delete</button>
+                <button onclick="fillUpdateForm(${data.id})">Update</button> <!-- Update button -->
+            </td>
+            `;
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+
+function fillUpdateForm(bookId) {
+        let row = document.querySelector(`[data-id="${bookId}"]`);
+        let title = row.cells[1].textContent;
+        let author = row.cells[2].textContent;
+        let publishedDate = row.cells[3].textContent;
+        let isbn = row.cells[4].textContent;
+        let numPages = row.cells[5].textContent;
+        // let coverImageURL = row.cells[6].textContent;
+        // let coverImageURL = row.cells[6].querySelector('img').src; 
+        let coverImageURL = row.cells[6].querySelector('img').getAttribute('src');
+
+
+        document.getElementById("bookIdInputUpdate").value = bookId;
+        document.getElementById("titleInputUpdate").value = title;
+        document.getElementById("authorInputUpdate").value = author;
+        document.getElementById("publishedDateInputUpdate").value = publishedDate;
+        document.getElementById("isbnInputUpdate").value = isbn;
+        document.getElementById("numPagesInputUpdate").value = numPages;
+        document.getElementById("coverImageURLInputUpdate").value = coverImageURL;
+
+
+        document.getElementById("updateBookForm").style.display = "block";
+    }
+
+    function updateBook() {
+    let bookId = document.getElementById("bookIdInputUpdate").value;
+    let title = document.getElementById("titleInputUpdate").value;
+    let author = document.getElementById("authorInputUpdate").value;
+    let publishedDate = document.getElementById("publishedDateInputUpdate").value;
+    let isbn = document.getElementById("isbnInputUpdate").value;
+    let numPages = document.getElementById("numPagesInputUpdate").value;
+    let coverImageURL = document.getElementById("coverImageURLInputUpdate").value;
+
+    let formData = {
+        book_id: bookId,
+        title: title,
+        author: author,
+        published_date: publishedDate,
+        isbn: isbn,
+        num_pages: numPages,
+        cover_image_url: coverImageURL
+    };
+
+    fetch('/update_book', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        let row = document.querySelector(`[data-id="${bookId}"]`);
+        row.cells[1].textContent = title;
+        row.cells[2].textContent = author;
+        row.cells[3].textContent = publishedDate;
+        row.cells[4].textContent = isbn;
+        row.cells[5].textContent = numPages;
+        // row.cells[6].textContent = coverImageURL;
+        // row.cells[6].querySelector('img').getAttribute('src') = coverImageURL;
+        row.cells[6].querySelector('img').setAttribute('src', coverImageURL);
+
+
+        document.getElementById("updateBookForm").style.display = "none";
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+        function deleteBook(bookId) {
+        // Make an AJAX request to delete the book from the server
+        fetch(`/delete_book/${bookId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                // If the deletion was successful, remove the book row from the table
+                let row = document.querySelector(`[data-id="${bookId}"]`);
+                row.remove();
+            } else {
+                console.error('Failed to delete book');
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+    </script>
+</body>
+
+</html> 
+
