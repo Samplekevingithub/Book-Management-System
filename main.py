@@ -45,17 +45,38 @@ class User(Base, UserMixin):
 # Define SQLAlchemy models
 class Book(Base):
     __tablename__ = "books"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    title = Column(String, index=True)
-    author = Column(String, index=True)
-    published_date = Column(Date)
-    isbn = Column(String, index=True)
-    num_pages = Column(Integer)
-    cover_image_url = Column(String, nullable=True)
-    user_id = Column(Integer, ForeignKey('user.id'))  # Define user_id column and establish a ForeignKey relationship
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String, index=True)
+    author = db.Column(db.String, index=True)
+    published_date = db.Column(db.Date)
+    isbn = db.Column(db.String, index=True)
+    num_pages = db.Column(db.Integer)
+    cover_image_url = db.Column(String, nullable=True)
+    genre = db.Column(db.String) 
+    publisher = db.Column(db.String)  
+    language = db.Column(db.String)  
+    description = db.Column(db.String)  
+    ratings = db.Column(db.Float)  
+
+    user_id = db.Column(db.Integer, ForeignKey('user.id'))  # Define user_id column and establish a ForeignKey relationship
     
     # Define relationship with User
     user = relationship("User", back_populates="books")
+    def serialize(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'author': self.author,
+            'published_date': self.published_date.strftime('%Y-%m-%d'),  # Format date as string
+            'isbn': self.isbn,
+            'num_pages': self.num_pages,
+            'cover_image_url': self.cover_image_url,
+            'genre': self.genre,  # Serialize new fields
+            'publisher': self.publisher,
+            'language': self.language,
+            'description': self.description,
+            'ratings': self.ratings
+        }
 
 # Define GraphQL types
 class BookType(SQLAlchemyObjectType):
@@ -77,25 +98,6 @@ def loader_user(user_id):
 with app.app_context():
     db.create_all()
 
-# from flask import redirect
-
-# @app.route('/login', methods=["GET", "POST"])
-# def login_page():
-#     if request.method == "POST":
-#         email = request.form.get("email")
-#         password = request.form.get("password")
-        
-#         user = db.session.query(User).filter_by(email=email).first()
-        
-#         if user and user.password == password:
-#             session['user_id'] = user.id
-#             access_token=create_access_token(identity=user.id)
-#             login_user(user)
-#             return redirect(url_for("index", message="Login successful, welcome {}!".format(user.name)))
-#         return jsonify({'message':'Invalid credentials'}), 401
-            
-#     elif request.method == "GET":
-#         return render_template('login.html')
 
 from flask import redirect, flash
 
@@ -160,62 +162,26 @@ def register_page():
     flash('Please fill all required fields', 'signup_error')
     return redirect(url_for('login_page'))
 
+from sqlalchemy import or_
+from flask import jsonify
 
-
-# @app.route('/register', methods=["POST"])
-# def register_page():
-#     email = request.form.get("email")
-#     password = request.form.get("password")
-#     name = request.form.get('name')
+@app.route('/search')
+@login_required  # Restrict access to logged-in users only
+def search():
+    search_query = request.args.get('q')
     
-#     # Check if required fields are not None
-#     if email is None or password is None or name is None:
-#         return {'error': 'Missing required fields'}, 400
-
-#     # Check if email already exists
-#     if db.session.query(User).filter_by(email=email).first():
-#         return {'error': 'Email already exists'}, 409
-
-#     # Check if name contains only letters
-#     if not name.isalpha():
-#         return {'error': 'Name must contain only letters'}, 400
+    user_id = current_user.id  # Get the ID of the logged-in user
+    # Filter the search results based on the logged-in user's ID
+    search_results = SessionLocal().query(Book).filter(
+        (Book.user_id == user_id) & (or_(Book.title.ilike(f'%{search_query}%'), Book.author.ilike(f'%{search_query}%')))
+    ).all()
+    if not search_results:
+        return jsonify({'message': 'No results found for the given query.'}), 404   
+    # Serialize search results to JSON
+    search_results_json = [book.serialize() for book in search_results]
     
-#     if not password:
-#         return {'error': 'Password is required'}, 400
-
-#     # Create the user
-#     user = User(email=email, password=password, name=name)
-#     db.session.add(user)
-#     db.session.commit()
-
-#     session['user_id'] = user.id
-#     login_user(user)  # Automatically login user after registration
-#     return redirect(url_for("index"))
-
-
-# @app.route('/register', methods=["POST"])
-# def register_page():
-#     email = request.form.get("email")
-#     password = request.form.get("password")
-#     name = request.form.get('name')
-    
-#     # Check if required fields are not None
-#     if email is None or password is None or name is None:
-#         return {'error': 'Missing required fields'}, 400
-
-#     # Check if email already exists
-#     if db.session.query(User).filter_by(email=email).first():
-#         return {'error': 'Email already exists'}, 409
-
-#     # Create the user
-#     user = User(email=email, password=password, name=name)
-#     db.session.add(user)
-#     db.session.commit()
-
-#     session['user_id'] = user.id
-#     login_user(user)  # Automatically login user after registration
-#     return redirect(url_for("index"))
-#     return {'message': 'User created successfully'}, 201
+    # Return JSON response
+    return jsonify(search_results_json)
 
 
 @app.route('/logout')
@@ -259,12 +225,17 @@ def add_book():
     isbn = request.form['isbn']
     num_pages = request.form['num_pages']
     cover_image_url = request.form['cover_image_url']
+    genre=request.form['genre']
+    publisher = request.form['publisher']
+    language = request.form['language']
+    description = request.form['description']
+    ratings = request.form['ratings']
     user_id = session['user_id']  # Get the user ID from the session
 
     # Add the book to the database
     db = SessionLocal()
     book = Book(title=title, author=author, published_date=published_date,
-                isbn=isbn, num_pages=num_pages, cover_image_url=cover_image_url, user_id=user_id)
+                isbn=isbn, num_pages=num_pages, cover_image_url=cover_image_url,genre=genre,publisher=publisher,language=language,description=description,ratings=ratings, user_id=user_id)
     db.add(book)
     db.commit()
     return redirect(url_for('index'))
@@ -298,23 +269,41 @@ def update_book():
     isbn = data.get('isbn')
     num_pages = data.get('num_pages')
     cover_image_url = data.get('cover_image_url')
+    genre=data.get('genre')
+    publisher=data.get('publisher')
+    language=data.get('language')
+    description=data.get('description')
+    ratings=data.get('ratings')
 
-    # Update the book
+
     if title:
-        book.title = title
+        book.title=title
     if author:
-        book.author = author
+        book.author=author
     if published_date_str:
-        book.published_date = datetime.strptime(published_date_str, '%Y-%m-%d')
+        book.published_date_str=published_date_str
     if isbn:
         book.isbn = isbn
     if num_pages:
         book.num_pages = num_pages
     if cover_image_url:
         book.cover_image_url = cover_image_url
+    if genre:
+        book.genre = genre
+    if publisher:
+        book.publisher = publisher
+    if language:
+        book.language = language
+    if description:
+        book.description = description
+    if ratings:
+        book.ratings = ratings
 
+    # Commit changes to the database
     db.commit()
     db.refresh(book)
+
+    # Return success response with updated book details
     return jsonify({
         'success': True,
         'message': 'Book updated successfully',
@@ -325,7 +314,12 @@ def update_book():
             'published_date': book.published_date.strftime('%Y-%m-%d') if book.published_date else None,
             'isbn': book.isbn,
             'num_pages': book.num_pages,
-            'cover_image_url': book.cover_image_url
+            'cover_image_url': book.cover_image_url,
+            'genre': book.genre,
+            'publisher': book.publisher,
+            'language': book.language,
+            'description': book.description,
+            'ratings': book.ratings
         }
     }), 200
 
@@ -354,12 +348,16 @@ def delete_book(book_id):
 class Query(ObjectType):
     books = graphene.List(BookType)
     book = graphene.Field(BookType, id=graphene.Int())
+    books_by_genre = graphene.List(BookType, genre=graphene.String())
 
     def resolve_books(self, info):
         return SessionLocal().query(Book).all()
 
     def resolve_book(self, info, id):
         return SessionLocal().query(Book).filter(Book.id == id).first()
+
+    def resolve_books_by_genre(self, info, genre):
+        return SessionLocal().query(Book).filter(Book.genre == genre).all()
 
 class CreateBook(graphene.Mutation):
     class Arguments:
@@ -369,13 +367,17 @@ class CreateBook(graphene.Mutation):
         isbn = graphene.String()
         num_pages = graphene.Int()
         cover_image_url = graphene.String()
-    
+        genre = graphene.String()
+        publisher = graphene.String()
+        language = graphene.String()
+        description = graphene.String()
+        ratings = graphene.Float()
     book = graphene.Field(BookType)
 
-    def mutate(self, info, title, author, published_date, isbn, num_pages, cover_image_url):
+    def mutate(self, info, id, title, author, published_date, isbn, num_pages, cover_image_url, genre, publisher, language, description, ratings):
         db = SessionLocal()
         book = Book(title=title, author=author, published_date=published_date,
-                    isbn=isbn, num_pages=num_pages, cover_image_url=cover_image_url)
+                isbn=isbn, num_pages=num_pages, cover_image_url=cover_image_url,genre=genre,publisher=publisher,language=language,description=description,ratings=ratings)
         db.add(book)
         db.commit()
         db.refresh(book)
@@ -391,27 +393,32 @@ class UpdateBook(graphene.Mutation):
         isbn = graphene.String()
         num_pages = graphene.Int()
         cover_image_url = graphene.String()
+        genre = graphene.String()
+        publisher = graphene.String()
+        language = graphene.String()
+        description = graphene.String()
+        ratings = graphene.Float()
 
     book = graphene.Field(BookType)
 
-    def mutate(self, info, id, title, author, published_date, isbn, num_pages, cover_image_url):
+    def mutate(self, info, id, title, author, published_date, isbn, num_pages, cover_image_url, genre, publisher, language, description, ratings):
         db = SessionLocal()
         book=db.query(Book).filter(Book.id == id).first()
         if not book:
             raise Exception(f"Book with id {id} not found")
 
-        if title:
-            book.title = title
-        if author:
-            book.author = author
-        if published_date:
-            book.published_date = published_date
-        if isbn:
-            book.isbn = isbn
-        if num_pages:
-            book.num_pages = num_pages
-        if cover_image_url:
-            book.cover_image_url = cover_image_url
+        # Update fields
+        book.title = title
+        book.author = author
+        book.published_date = published_date
+        book.isbn = isbn
+        book.num_pages = num_pages
+        book.cover_image_url = cover_image_url
+        book.genre = genre
+        book.publisher = publisher
+        book.language = language
+        book.description = description
+        book.ratings = ratings
 
         db.commit()
         db.refresh(book)
