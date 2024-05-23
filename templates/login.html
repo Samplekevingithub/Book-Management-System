@@ -113,7 +113,7 @@ header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    /* justify-content: center; */
     padding: 0px 40px;
 }
  
@@ -271,14 +271,49 @@ header {
         width: 130px;
         font-size: 19px;
     }
+
+  /* For Responsiveness of the page */
+
+  @media screen and (max-width: 650px) {
+    /* Existing CSS for responsiveness */
+
+    /* Add the danger class styling here */
+    .flash-message.danger {
+        color: #721c24;
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+        padding: 0.75rem 1.25rem;
+        margin-bottom: 1rem;
+        border: 1px solid transparent;
+        border-radius: 0.25rem;
+    }
 }
+
+@media screen and (max-width: 320px) {
+    /* Existing CSS for responsiveness */
+
+    /* Add the danger class styling here */
+    .flash-message.danger {
+        color: #721c24;
+        background-color: #2e0a0d;
+        border-color: #f5c6cb;
+        padding: 0.75rem 1.25rem;
+        margin-bottom: 1rem;
+        border: 1px solid transparent;
+        border-radius: 0.25rem;
+    }
+}
+
+}
+
        </style>
-   </head>
+  
+</head>
    <body>
        <header>
            <h1 class="heading">Book Management System</h1>
            <h3 class="title">Sliding Login & Registration</h3>
-       </header>
+       </header>  
    
        <div class="container">
            <div class="slider"></div>
@@ -286,7 +321,6 @@ header {
                <button class="login active">Login</button>
                <button class="signup">Signup</button>
            </div>
-   
            <div class="form-section">
                <div class="login-box">
                    <h3 class="title">Login</h3>
@@ -311,12 +345,25 @@ header {
                        </div>
                        <button class="button is-block is-info is-large is-fullwidth">Login</button>
                    </form>
+                   {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            {% if category == 'login_error' %}
+                                <ul class="flash-messages">
+                                    <li class="flash-message danger">{{ message }}</li>
+                                </ul>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    {% endwith %}
                </div>
    
                <div class="signup-box">
                    <h3 class="title">Signup</h3>
                    <form method="POST" action="/register">
-                       <div class="field">
+                  
+                  
+                    <div class="field">
                            <div class="control">
                                <input class="input is-large" type="text" name="name" placeholder="Your Name" autofocus="">
                            </div>
@@ -335,11 +382,24 @@ header {
                        </div>
    
                        <button class="button is-block is-info is-large is-fullwidth">Signup</button>
-                   </form>
-               </div>
+                      
+                    </form>
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            {% if category == 'signup_error' %}
+                                <ul class="flash-messages">
+                                    <li class="flash-message danger">{{ message }}</li>
+                                </ul>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+                </div>
            </div>
        </div>
-   
+         
+
        <script>
            let signup = document.querySelector(".signup");
             let login = document.querySelector(".login");

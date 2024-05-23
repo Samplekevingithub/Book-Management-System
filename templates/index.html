@@ -91,67 +91,64 @@
             cursor: pointer;
             margin: 5px;
         }
+
+        /* .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4); 
+            }
+
+            .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; 
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; 
+            } */
+
     </style>
      <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
-
+    
 </head>
 
 <body>  
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
-          <a class="navbar-brand" href="#">Book Management System</a>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-          </button>
-          <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-              <li class="nav-item">
-                <a class="nav-link active" aria-current="page" href="/">Home</a>
-              </li>
-              
-              {% if current_user.is_authenticated %}
-              <li class="nav-item">
-                <a class="nav-link" href="/logout">Logout</a>
-              </li>
-              {% else %}
-              <li class="nav-item">
-                <a class="nav-link" href="/login">Logout</a>
-              </li>
-          
-              {% endif %}
+            <a class="navbar-brand" href="#">Book Management System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+                aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/">Home</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ml-auto">
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <!-- <a class="nav-link" href="/logout">Logout ({{ current_user.name }})</a> -->
+                        <a class="btn btn-outline-light" href="/logout">
+                            <i class="fas fa-sign-out-alt"></i> Logout ({{ current_user.name }})
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
             </div>
         </div>
-      </nav>
-      {% if message %}
-      <div>{{ message }}</div>
-  {% endif %}
-  
-    <!-- <nav>
-        <ul>
-            <li><a href="/">Home</a></li>
-            <li><a href="{{url_for('login_page')}}">Login</a></li>
-            <li><a href="{{url_for('register_page')}}">Register</a></li>
-            {% if current_user.is_authenticated %}
-                <li><a href="/logout">Logout</a></li>
-            {% endif %}
-        </ul>
-    </nav> -->
-
-    <!-- Your existing content -->
-    <!-- Remember to replace the Flask URL routes ("/", "/login", "/register", "/logout") with appropriate URLs according to your Flask application -->
-    <!-- <h1>Login Authentication System in Flask.</h1>
-        <a href="{{url_for('login_page')}}">Login page</a><br>
-        <a href="{{url_for('register_page')}}">Register page</a> -->
-        <!-- <a href="{{url_for('login_page')}}">Login page</a><br>
-        <a href="{{url_for('register_page')}}">Register page</a>
-    {% if current_user.is_authenticated %}
-    <h1>You are logged in</h1>
-    <a href="/logout">Logout</a>
-    {% else %}
-    <h1>You are not logged in</h1>
+    </nav>
+    {% if message %}
+    <div>{{ message }}</div>
     {% endif %}
-    <h1>Book Management System</h1> -->
-
+ 
     <div id="formContainer">
         <div class="form-container">
             <h2 class="section-heading">Add New Book</h2>
@@ -173,7 +170,9 @@
         </div>
 
         <div class="form-container">
-            <h2 class="section-heading">Update Book</h2>
+            <!-- <h2 class="section-heading">Update Book</h2> -->
+            <!-- <div id="updateBookModal" class="modal"> -->
+                <!-- <div class="modal-content"> -->
             <form id="updateBookForm"  style="display:none;" onsubmit="event.preventDefault(); updateBook();">
                 <input type="hidden" id="bookIdInputUpdate">
                 <label for="titleInputUpdate">Title:</label>
@@ -191,6 +190,8 @@
                 <button type="submit">Update Book</button>
             </form>
         </div>
+    </div>
+    <!-- </div> -->
     </div>
 
 
@@ -214,8 +215,14 @@
             <td>{{ book.published_date }}</td>
             <td>{{ book.isbn }}</td>
             <td>{{ book.num_pages }}</td>
-            <td><img src="{{ book.cover_image_url }}" width="100" alt="Cover Image"></td>
-            <!-- <td>{{ book.cover_image_url }}</td> -->
+            <!-- <td><img src="{{ book.cover_image_url }}" width="100" alt="Cover Image"></td> -->
+
+            <td>
+                {% if book.cover_image_url %}
+                    <img src="{{ book.cover_image_url }}" width="50" >
+                {% endif %}
+            </td>
+            
             <!-- <td><button onclick="deleteBook({{ book.id }})">Delete</button></td> -->
             <td>
                 <button onclick="deleteBook({{ book.id }})">Delete</button>
@@ -275,7 +282,6 @@
         .catch(error => console.error('Error:', error));
     }
 
-
 function fillUpdateForm(bookId) {
         let row = document.querySelector(`[data-id="${bookId}"]`);
         let title = row.cells[1].textContent;
@@ -296,7 +302,7 @@ function fillUpdateForm(bookId) {
         document.getElementById("numPagesInputUpdate").value = numPages;
         document.getElementById("coverImageURLInputUpdate").value = coverImageURL;
 
-
+        // document.getElementById("updateBookModal").style.display = "block";
         document.getElementById("updateBookForm").style.display = "block";
     }
 
@@ -336,10 +342,11 @@ function fillUpdateForm(bookId) {
         row.cells[5].textContent = numPages;
         // row.cells[6].textContent = coverImageURL;
         // row.cells[6].querySelector('img').getAttribute('src') = coverImageURL;
-        row.cells[6].querySelector('img').setAttribute('src', coverImageURL);
+        row.cells[6].querySelector('img').getAttribute('src', coverImageURL);
 
 
         document.getElementById("updateBookForm").style.display = "none";
+        // document.getElementById("updateBookModal").style.display = "none";
     })
     .catch(error => console.error('Error:', error));
 }
@@ -368,3 +375,35 @@ function fillUpdateForm(bookId) {
 
 </html> 
 
+
+   
+    <!-- <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="#">Book Management System</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+              <li class="nav-item">
+                <a class="nav-link active" aria-current="page" href="/">Home</a>
+              </li>
+              <ul class="navbar-nav ml-auto"> 
+              {% if current_user.is_authenticated %}
+              
+                <li class="nav-item">
+                    <a class="nav-link" href="/logout">Logout ({{ current_user.name }})</a>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/login">Login</a>
+                </li>
+                {% endif %}
+                </ul>
+            </div>
+        </div>
+      </nav>
+      {% if message %}
+      <div>{{ message }}</div>
+  {% endif %} -->
+  
