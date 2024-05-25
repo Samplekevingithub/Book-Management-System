@@ -106,34 +106,64 @@ class BookType(SQLAlchemyObjectType):
         model = Book
         interfaces = (graphene.relay.Node,)
     id = graphene.ID(description="ID of the book", required=True)
+    reviews = graphene.List(lambda: ReviewType)
 
     def resolve_id(self, info):
         return str(self.id)
 
-    
+    def resolve_reviews(self, info):
+        return [review for review in self.reviews]
+# class BookType(SQLAlchemyObjectType):
+#     class Meta:
+#         model = Book
+#         interfaces = (graphene.relay.Node,)
+#     id = graphene.ID(description="ID of the book", required=True)
+
+#     def resolve_id(self, info):
+#         return str(self.id)
+
+
+# Update resolver functions for ReviewType
 class ReviewType(SQLAlchemyObjectType):
     class Meta:
         model = Review
         interfaces = (graphene.relay.Node,)
+    id = graphene.ID(description="ID of the review", required=True)
+    user = graphene.String()  # Direct link to user who left the review
+    book = graphene.String()  # Direct link to the reviewed book
 
-    # Define fields for user, book, rating, comment, and timestamp
-    user = graphene.Field(UserType)
-    book = graphene.Field(BookType)
-    rating = graphene.Int()
-    comment = graphene.String()
-    timestamp = graphene.DateTime()
-
-    # Resolve the user field to retrieve the corresponding user object
     def resolve_user(self, info):
-        return self.user
+        # Assuming the users are accessible via a '/users/<user_id>' endpoint
+        return f"/users/{self.user_id}"
 
-    # Resolve the book field to retrieve the corresponding book object
     def resolve_book(self, info):
-        return self.book
+        # Assuming the books are accessible via a '/books/<book_id>' endpoint
+        return f"/books/{self.book_id}"
 
-    # Resolve the timestamp field to format the timestamp as a DateTime object
-    def resolve_timestamp(self, info):
-        return self.timestamp
+
+# class ReviewType(SQLAlchemyObjectType):
+#     class Meta:
+#         model = Review
+#         interfaces = (graphene.relay.Node,)
+
+#     # Define fields for user, book, rating, comment, and timestamp
+#     user = graphene.Field(UserType)
+#     book = graphene.Field(BookType)
+#     rating = graphene.Int()
+#     comment = graphene.String()
+#     timestamp = graphene.DateTime()
+
+#     # Resolve the user field to retrieve the corresponding user object
+#     def resolve_user(self, info):
+#         return self.user
+
+#     # Resolve the book field to retrieve the corresponding book object
+#     def resolve_book(self, info):
+#         return self.book
+
+#     # Resolve the timestamp field to format the timestamp as a DateTime object
+#     def resolve_timestamp(self, info):
+#         return self.timestamp
 
 # Create database tables
 # Base.metadata.create_all(bind=engine)
@@ -391,6 +421,132 @@ def delete_book(book_id):
     db.session.commit()
     return redirect(url_for('index'))
 
+@app.route('/get_reviews')
+def get_reviews():
+    reviews = Review.query.all()
+    review_data = []
+    for review in reviews:
+        review_data.append({
+            'id': review.id,
+            'user_id': review.user_id,
+            'book_id': review.book_id,
+            'rating': review.rating,
+            'comment': review.comment,
+            'timestamp': review.timestamp.strftime('%Y-%m-%d %H:%M:%S')  # Convert timestamp to string format
+        })
+    return jsonify({'reviews': review_data})
+
+
+@app.route('/create_review', methods=['GET'])
+@login_required
+def render_review_form():
+    return render_template('review.html')
+
+@app.route('/create_review', methods=['POST'])
+@login_required
+def handle_review_submission():
+    if 'user_id' not in session:
+        return jsonify({'error': 'User not logged in'}), 401
+
+    data = request.get_json()
+    user_id = data.get('user_id')
+    book_id = data.get('book_id')
+    rating = int(data.get('rating')) if data.get('rating') is not None else None
+    comment = data.get('comment')
+    timestamp_str = data.get('timestamp')
+
+    user = db.session.query(User).get(user_id)
+    book = db.session.query(Book).get(book_id)
+
+    if not user:
+        return jsonify({'error': f"User with ID {user_id} not found"}), 404
+    if not book:
+        return jsonify({'error': f"Book with ID {book_id} not found"}), 404
+
+    timestamp = datetime.fromisoformat(timestamp_str)
+    review = Review(
+        user=user,
+        book=book,
+        rating=rating,
+        comment=comment,
+        timestamp=timestamp if timestamp else datetime.utcnow()
+    )
+
+    db.session.add(review)
+    db.session.commit()
+
+    return jsonify({'success': 'Review created successfully'}), 200
+
+@app.route('/update_review', methods=['POST'])
+@login_required
+def update_review():
+    if 'user_id' not in session:
+        return jsonify({'error': 'User not logged in'}), 401
+
+    data = request.get_json()  # Get JSON data from request body
+    review_id = data.get('review_id')  # Extract review_id from JSON data
+
+    if review_id is None:
+        return jsonify({'error': 'Review ID not provided'}), 400
+
+    review = db.session.query(Review).filter(Review.id == review_id).first()
+
+    if review is None:
+        return jsonify({'error': 'Review not found'}), 404
+
+    if review.user_id != session['user_id']:
+        return jsonify({'error': 'You are not authorized to update this review'}), 403
+
+    # Retrieve form data
+    rating = data.get('rating')
+    comment = data.get('comment')
+
+    # Update review fields if provided
+    if rating is not None:
+        review.rating = rating
+    if comment:
+        review.comment = comment
+
+    # Commit changes to the database
+    db.session.commit()
+
+    # Return success response with updated review details
+    return jsonify({
+        'success': True,
+        'message': 'Review updated successfully',
+        'data': {
+            'id': review.id,
+            'user_id': review.user_id,
+            'book_id': review.book_id,
+            'rating': review.rating,
+            'comment': review.comment,
+            'timestamp': review.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        }
+    }), 200
+
+
+
+@app.route('/delete_review', methods=['POST'])
+@login_required
+def delete_review():
+    if 'user_id' not in session:
+        return jsonify({'error': 'User not logged in'}), 401
+
+    data = request.get_json()
+    review_id = data.get('review_id')
+
+    if review_id is None:
+        return jsonify({'error': 'Invalid review ID provided'}), 400
+
+    review = db.session.query(Review).get(review_id)
+
+    if not review:
+        return jsonify({'error': f"Review with ID {review_id} not found"}), 404
+
+    db.session.delete(review)
+    db.session.commit()
+
+    return jsonify({'success': 'Review deleted successfully'}), 200
 
 
 # Define GraphQL queries
@@ -410,18 +566,35 @@ def delete_book(book_id):
 #         return SessionLocal().query(Book).filter(Book.genre == genre).all()
 
     
-
 class Query(ObjectType):
     reviews = graphene.List(ReviewType)
     users = graphene.List(UserType)
+    books = graphene.List(BookType)
+    book = graphene.Field(BookType, id=graphene.ID())
+
     def resolve_reviews(self, info):
-        # Fetch and return all reviews from the database
         return db.session.query(Review).all()
+
     def resolve_users(self, info):
-        # Fetch and return all users from the database
         return db.session.query(User).all()
-    def resolve_books(self,info):
+
+    def resolve_books(self, info):
         return db.session.query(Book).all()
+
+    def resolve_book(self, info, id):
+        return db.session.query(Book).get(id)
+
+# class Query(ObjectType):
+#     reviews = graphene.List(ReviewType)
+#     users = graphene.List(UserType)
+#     def resolve_reviews(self, info):
+#         # Fetch and return all reviews from the database
+#         return db.session.query(Review).all()
+#     def resolve_users(self, info):
+#         # Fetch and return all users from the database
+#         return db.session.query(User).all()
+#     def resolve_books(self,info):
+#         return db.session.query(Book).all()
     
 class CreateReview(graphene.Mutation):
         class Arguments:
@@ -575,39 +748,7 @@ app.add_url_rule('/graphql', view_func=GraphQLView.as_view('graphql', schema=sch
 if __name__ == '__main__':
     app.run(debug=True)
 
-# @app.route('/create_review', methods=['POST'])
-# @login_required
-# def create_review():
-#     if 'user_id' not in session:
-#         return jsonify({'error': 'User not logged in'}), 401
 
-#     data = request.get_json()
-#     user_id = data.get('user_id')
-#     book_id = data.get('book_id')
-#     rating = data.get('rating')
-#     comment = data.get('comment')
-#     timestamp = data.get('timestamp')
-
-#     user = db.session.query(User).get(user_id)
-#     book = db.session.query(Book).get(book_id)
-
-#     if not user:
-#         return jsonify({'error': f"User with ID {user_id} not found"}), 404
-#     if not book:
-#         return jsonify({'error': f"Book with ID {book_id} not found"}), 404
-
-#     review = Review(
-#         user=user,
-#         book=book,
-#         rating=rating,
-#         comment=comment,
-#         timestamp=timestamp if timestamp else datetime.utcnow()
-#     )
-
-#     db.session.add(review)
-#     db.session.commit()
-
-#     return jsonify({'success': 'Review created successfully'}), 200
 # from flask_graphql_auth import AuthInfoField, create_access_token, query_jwt_required, mutation_jwt_required, get_jwt_identity, get_raw_jwt
 
 # class CreateReview(graphene.Mutation):

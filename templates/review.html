@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Book Management System</title>
+    <style>
+        body {
+            margin: 4rem;
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+        }
+
+        #formContainer {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .form-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 50%;
+            max-width: 600px;
+            margin: 10px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .error-message {
+            text-align: center;
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .rating-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .rating {
+            font-weight: bold; 
+            color: #961b1b;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: color 0.3s ease-in-out;
+            text-align: center;
+        }
+
+        .rating.selected {
+            color: yellow;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin: 20px 0;
+            width: 100%;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: #fff;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        /* Hover effect */
+        tr:hover {
+            background-color: #e9ecef;
+            transition: background-color 0.3s;
+        }
+
+        /* Styling table headers */
+        th {
+            background-color: #4CAF50;
+            color: #fff;
+            padding: 12px;
+            text-align: left;
+        }
+
+        /* Styling buttons */
+        td button {
+            margin-right: 5px; /* Add margin-right */
+            padding: 8px 12px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        td button:last-child {
+            margin-right: 0; /* Remove margin-right for the last button */
+        }
+        td button:hover {
+            background-color: #218838;
+        }
+
+    </style>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+        integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk"
+        crossorigin="anonymous">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Book Management System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+                aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/create_review">Review</a>
+                    </li>
+                </ul>
+                <form class="form-inline my-2 my-lg-0" id="searchForm">
+                    <input class="form-control mr-sm-2" type="search" id="searchInput" placeholder="Search"
+                        aria-label="Search">
+                    <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+                </form>
+                <ul class="navbar-nav ml-auto">
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="btn btn-outline-light" href="/logout">
+                            <i class="fas fa-sign-out-alt"></i> Logout ({{ current_user.name }})
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    {% if message %}
+    <div>{{ message }}</div>
+    {% endif %}
+
+    <div id="formContainer">
+        <div class="form-container">
+            <h2 class="section-heading">Add New Review</h2>
+            <form method="POST" id="reviewForm">
+                <!-- Hidden input fields for user ID and book ID -->
+                <label for="userId">User ID:</label>
+                <input type="number" id="userId" name="userId" required>
+                <label for="bookId">Book ID:</label>
+                <input type="number" id="bookId" name="bookId" required>
+                
+                <label for="rating">Rating:</label><br>
+                <div id="rating-container" class="rating-container">
+                    
+                    <b> 
+                        <span class="rating" data-value="1">★</span>
+                        <span class="rating" data-value="2">★</span>
+                        <span class="rating" data-value="3">★</span>
+                        <span class="rating" data-value="4">★</span>
+                        <span class="rating" data-value="5">★</span>
+                    </b> 
+                </div>
+    
+                <label for="comment">Comment:</label>
+                <textarea id="comment" name="comment" rows="4" cols="50" required></textarea>
+    
+                <button type="submit">Submit Review</button>
+            </form>
+        </div>
+        <div class="form-container">
+        <form id="updateReview" style="display:none;" onsubmit="event.preventDefault(); updateReview();">
+            <input type="hidden" id="reviewIdInputUpdate">
+            <label for="ratingInputUpdate">Rating:</label>
+            <input type="number" id="ratingInputUpdate">
+            <label for="commentInputUpdate">Comment:</label>
+            <textarea id="commentInputUpdate"></textarea>
+            <button type="submit">Update Review</button>
+        </form>
+    </div>
+    </div>
+    
+    <table id="outputTable">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>User</th> <!-- Changed from User ID to User -->
+            <th>Book</th>
+            <th>Rating</th>
+            <th>Comment</th>
+            <th>Timestamp</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for review in reviews %}
+        <tr data-id="{{ review.id }}">
+            <td>{{ review.id }}</td>
+            <td>{{ review.user_id }}</td>
+            <td>{{ review.book_id }}</td>
+            <td>{{ review.rating }}</td>
+            <td>{{ review.comment }}</td>
+            <td>{{ review.timestamp }}</td>
+            <td>
+                <button onclick="deleteReview('{{ review.id }}')">Delete</button>
+                <button onclick="fillUpdateReviewForm('{{ review.id }}')">Update</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    </table>
+    
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Form submission for adding a new review
+// Function to fetch and render reviews
+$(document).ready(function() {
+    fetchReviews(); // Page load hone par reviews fetch kare
+});
+
+function fetchReviews() {
+    $.ajax({
+        type: 'GET',
+        url: '/get_reviews', 
+        success: function (response) {
+            $('#outputTable tbody').empty();
+            response.reviews.forEach(function (review) {
+                var row = $('<tr>').attr('data-id', review.id);
+                row.append($('<td>').text(review.id));   
+                row.append($('<td>').text(review.user_id));
+                row.append($('<td>').text(review.book_id));
+                row.append($('<td>').text(review.rating));
+                row.append($('<td>').text(review.comment));
+                row.append($('<td>').text(review.timestamp));
+                row.append($('<td>').html('<button onclick="deleteReview(' + review.id + ')">Delete</button><button onclick="fillUpdateReviewForm(' + review.id + ')">Update</button>'));
+                $('#outputTable tbody').append(row);
+            });
+
+        },
+        error: function (xhr, status, error) {
+            console.error(xhr.responseText);
+        }
+    });
+}
+
+// Form submission for adding a new review
+$('#reviewForm').submit(function (event) {
+    event.preventDefault(); // Prevent default form submission
+
+    var formData = {
+        user_id: $('#userId').val(),
+        book_id: $('#bookId').val(),
+        rating: $('.rating.selected').length > 0 ? $('.rating.selected').last().data('value') : null,
+        comment: $('#comment').val(),
+        timestamp: new Date().toISOString() // Get current timestamp
+    };
+
+    // Send AJAX POST request to server
+    $.ajax({
+        type: 'POST',
+        url: '/create_review',
+        contentType: 'application/json',
+        data: JSON.stringify(formData),
+        success: function (response) {
+            // Handle success response
+            console.log(response);
+            // After successfully adding the review, fetch and render reviews again
+            fetchReviews();
+            // Clear the form fields
+            $('#userId').val('');
+            $('#bookId').val('');
+            $('.rating').removeClass('selected');
+            $('#comment').val('');
+        },
+        error: function (xhr, status, error) {
+            // Handle error response
+            var errorMessage = xhr.responseJSON.error;
+            console.error(errorMessage);
+            // Display error message to the user
+            alert(errorMessage); // You can replace this with a more user-friendly way of displaying errors
+        }
+    });
+});
+
+
+
+function fillUpdateReviewForm(reviewId) {
+    let row = document.querySelector(`[data-id="${reviewId}"]`);
+    let rating = row.cells[3].textContent;
+    let comment = row.cells[4].textContent;
+
+
+
+    // Populate the update form with review details
+    document.getElementById("reviewIdInputUpdate").value = reviewId;
+    document.getElementById("ratingInputUpdate").value = rating;
+    document.getElementById("commentInputUpdate").value = comment;
+
+    // Display the update form
+    document.getElementById("updateReview").style.display = "block";
+}
+
+function updateReview() {
+    let reviewId = document.getElementById("reviewIdInputUpdate").value;
+    let rating = document.getElementById("ratingInputUpdate").value;
+    let comment = document.getElementById("commentInputUpdate").value;
+
+    let formData = {
+        review_id: reviewId,
+        rating: rating,
+        comment: comment
+    };
+
+    fetch('/update_review', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Update the table row with the new values
+        let row = document.querySelector(`[data-id="${reviewId}"]`);
+        row.cells[3].textContent = rating;
+        row.cells[4].textContent = comment;
+
+        // Hide the update form after successful update
+        document.getElementById("updateReview").style.display = "none";
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+
+
+function deleteReview(reviewId) {
+            $.ajax({
+                type: 'POST',
+                url: '/delete_review',
+                contentType: 'application/json',
+                data: JSON.stringify({ review_id: reviewId }),
+                success: function (response) {
+                    console.log(response);
+                    // Reload reviews after deletion
+                    fetchReviews();
+                },
+                error: function (xhr, status, error) {
+                    console.error(xhr.responseText);
+                }
+            });
+        }
+
+</script>
+    
+<script>
+    (function() {
+        const ratingContainer = document.querySelector('.rating-container');
+
+        ratingContainer.addEventListener('click', (event) => {
+            if (event.target.classList.contains('rating')) {
+                const ratingElements = ratingContainer.querySelectorAll('.rating');
+
+                ratingElements.forEach((element) => {
+                    if (element.dataset.value <= event.target.dataset.value) {
+                        element.classList.add('selected');
+                    } else {
+                        element.classList.remove('selected');
+                    }
+                });
+
+                const ratingInput = document.getElementById('rating');
+
+                if (ratingInput) {
+                    ratingInput.value = event.target.dataset.value;
+                }
+            }
+        });
+    })();
+</script>
+
+</body>
+
+</html>
