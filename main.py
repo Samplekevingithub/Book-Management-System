@@ -18,6 +18,7 @@ from flask import flash
 from graphql import GraphQLError
 from sqlalchemy.orm import sessionmaker
 import sqlalchemy as db_module
+from flask_paginate import Pagination, get_page_args
 
 app = Flask(__name__)
 # csrf = CSRFProtect(app)
@@ -249,8 +250,17 @@ def search():
     
     user_id = current_user.id  # Get the ID of the logged-in user
     # Filter the search results based on the logged-in user's ID
-    search_results = db_module.session.query(Book).filter(
-        (Book.user_id == user_id) & (or_(Book.title.ilike(f'%{search_query}%'), Book.author.ilike(f'%{search_query}%')))
+
+    search_results = Book.query.filter(
+        (Book.user_id == user_id) &
+        (or_(
+            Book.title.ilike(f'%{search_query}%'),
+            Book.author.ilike(f'%{search_query}%'),
+            Book.genre.ilike(f'%{search_query}%'),  # Filter by Genre
+            Book.ratings.ilike(f'%{search_query}%'),  # Filter by Rating
+            Book.published_date.ilike(f'%{search_query}%'),  # Filter by Published Date
+            Book.language.ilike(f'%{search_query}%')  # Filter by Language
+        ))
     ).all()
     if not search_results:
         return jsonify({'message': 'No results found for the given query.'}), 404   
@@ -279,13 +289,31 @@ def index():
     if 'user_id' in session:  # Check if user is logged in
         user_id = session['user_id']
         message = request.args.get('message')
-        
-        # Fetch books associated with the logged-in user
-        books = db.session.query(Book).filter(Book.user_id == user_id).all()
-        
-        return render_template('index.html', books=books, book=None, message=message)
+
+        # Fetch books associated with the logged-in user with pagination
+        page, per_page, offset = get_page_args(page_parameter='page', per_page_parameter='per_page')
+        books = db.session.query(Book).filter(Book.user_id == user_id).offset(offset).limit(per_page).all()
+
+        pagination = Pagination(page=page, total=len(books), record_name='books', per_page=per_page, css_framework='bootstrap4')
+
+        return render_template('index.html', books=books, book=None, message=message, pagination=pagination)
     else:
         return redirect(url_for('login_page'))  # Redirect to login page if user is not logged in
+
+
+# @app.route('/')
+# def index():
+#     if 'user_id' in session:  # Check if user is logged in
+#         user_id = session['user_id']
+#         message = request.args.get('message')
+
+#         # Fetch books associated with the logged-in user with pagination
+#         # Fetch books associated with the logged-in user
+#         books = db.session.query(Book).filter(Book.user_id == user_id).all()
+        
+#         return render_template('index.html', books=books, book=None, message=message)
+#     else:
+#         return redirect(url_for('login_page'))  # Redirect to login page if user is not logged in
 
 
 @app.route('/add_book', methods=['POST'])
@@ -747,82 +775,4 @@ app.add_url_rule('/graphql', view_func=GraphQLView.as_view('graphql', schema=sch
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-# from flask_graphql_auth import AuthInfoField, create_access_token, query_jwt_required, mutation_jwt_required, get_jwt_identity, get_raw_jwt
-
-# class CreateReview(graphene.Mutation):
-#     class Arguments:
-#         user_id = graphene.Int(required=True)
-#         book_id = graphene.Int(required=True)
-#         rating = graphene.Int(required=True)
-#         comment = graphene.String()
-#         timestamp = graphene.DateTime()
-
-#     review = graphene.Field(ReviewType)
-
-#     @mutation_jwt_required
-#     def mutate(self, info, user_id, book_id, rating, comment=None, timestamp=None):
-#         current_user_id = get_jwt_identity()  # Get the ID of the current user
-
-#         # Validate rating
-#         if not 1 <= rating <= 5:
-#             raise GraphQLError("Rating must be between 1 and 5")
-
-#         # Check if the current user matches the user_id provided in the arguments
-#         if current_user_id != user_id:
-#             raise GraphQLError("You are not authorized to leave a review for this user")
-
-#         # Fetch user and book objects from the database
-#         user = db.session.query(User).get(user_id)
-#         book = db.session.query(Book).get(book_id)
-
-#         # Validate user and book objects
-#         if not user:
-#             raise GraphQLError(f"User with ID {user_id} not found")
-#         if not book:
-#             raise GraphQLError(f"Book with ID {book_id} not found")
-
-#         # Create a new review object
-#         review = Review(
-#             user=user,
-#             book=book,
-#             rating=rating,
-#             comment=comment,
-#             timestamp=timestamp if timestamp else datetime.utcnow()
-#         )
-
-#         # Add the review to the database session and commit changes
-#         db.session.add(review)
-#         db.session.commit()
-
-#         return CreateReview(review=review)
-
-# class DeleteReview(graphene.Mutation):
-#     class Arguments:
-#         review_id = graphene.Int(required=True)
-
-#     success = graphene.Boolean()
-
-#     @mutation_jwt_required
-#     def mutate(self, info, review_id):
-#         current_user_id = get_jwt_identity()  # Get the ID of the current user
-
-#         # Fetch the review object
-#         review = db.session.query(Review).get(review_id)
-
-#         # Check if review exists
-#         if not review:
-#             raise GraphQLError(f"Review with ID {review_id} not found")
-
-#         # Check if the current user matches the user who left the review
-#         if current_user_id != review.user_id:
-#             raise GraphQLError("You are not authorized to delete this review")
-
-#         # Delete the review
-#         db.session.delete(review)
-#         db.session.commit()
-
-#         # Return success
-#         return DeleteReview(success=True)
 
