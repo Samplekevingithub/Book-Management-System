@@ -273,35 +273,40 @@ header {
     }
 
   /* For Responsiveness of the page */
+  .flash-message.danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            padding: 0.75rem 1.25rem;
+            margin-bottom: 1rem;
+            border: 1px solid transparent;
+            border-radius: 0.25rem;
+        }
 
-  @media screen and (max-width: 650px) {
-    /* Existing CSS for responsiveness */
+        /* Add consistent styling for flash messages */
+        .flash-message {
+            margin-bottom: 1rem;
+        }
 
-    /* Add the danger class styling here */
-    .flash-message.danger {
-        color: #721c24;
-        background-color: #f8d7da;
-        border-color: #f5c6cb;
-        padding: 0.75rem 1.25rem;
-        margin-bottom: 1rem;
-        border: 1px solid transparent;
-        border-radius: 0.25rem;
-    }
-}
+        /* Adjust for smaller screen sizes */
+        @media screen and (max-width: 320px) {
+            .flash-message {
+                padding: 0.5rem;
+            }
+        }
 
 @media screen and (max-width: 320px) {
     /* Existing CSS for responsiveness */
 
-    /* Add the danger class styling here */
     .flash-message.danger {
-        color: #721c24;
-        background-color: #2e0a0d;
-        border-color: #f5c6cb;
-        padding: 0.75rem 1.25rem;
-        margin-bottom: 1rem;
-        border: 1px solid transparent;
-        border-radius: 0.25rem;
-    }
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+}
 }
 
 }
@@ -315,48 +320,48 @@ header {
        </header>  
    
        <div class="container">
-           <div class="slider"></div>
-           <div class="btn">
-               <button class="login active">Login</button>
-               <button class="signup">Signup</button>
-           </div>
-           <div class="form-section">
-               <div class="login-box">
-                   <h3 class="title">Login</h3>
-                   <form method="POST" action="/login">
-                       <div class="field">
-                           <div class="control">
-                               <input class="input is-large" type="email" name="email" placeholder="Your Email" autofocus="">
-                           </div>
-                       </div>
-   
-                       <div class="field">
-                           <div class="control">
-                               <input class="input is-large" type="password" name="password" placeholder="Your Password">
-                           </div>
-                       </div>
-   
-                       <div class="field">
-                           <label class="checkbox">
-                               <input type="checkbox" name="remember">
-                               Remember me
-                           </label>
-                       </div>
-                       <button class="button is-block is-info is-large is-fullwidth">Login</button>
-                   </form>
-                   {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            {% if category == 'login_error' %}
-                                <ul class="flash-messages">
-                                    <li class="flash-message danger">{{ message }}</li>
-                                </ul>
-                            {% endif %}
-                        {% endfor %}
-                    {% endif %}
-                    {% endwith %}
-               </div>
-   
+        <div class="slider"></div>
+        <div class="btn">
+            <button class="login active">Login</button>
+            <button class="signup">Signup</button>
+        </div>
+        <div class="form-section">
+            <div class="login-box">
+                <h3 class="title">Login</h3>
+                <form method="POST" action="/login">
+                    <div class="field">
+                        <div class="control">
+                            <input class="input is-large" type="email" name="email" placeholder="Your Email" autofocus="">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <div class="control">
+                            <input class="input is-large" type="password" name="password" placeholder="Your Password">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label class="checkbox">
+                            <input type="checkbox" name="remember">
+                            Remember me
+                        </label>
+                    </div>
+                    <button class="button is-block is-info is-large is-fullwidth">Login</button>
+                </form>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        {% if category == 'login_error' %}
+                            <div class="flash-message danger">{{ message }}</div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% endwith %}
+            </div>
+  
+           
+
                <div class="signup-box">
                    <h3 class="title">Signup</h3>
                    <form method="POST" action="/register">
@@ -387,13 +392,13 @@ header {
                     {% if messages %}
                         {% for category, message in messages %}
                             {% if category == 'signup_error' %}
-                                <ul class="flash-messages">
-                                    <li class="flash-message danger">{{ message }}</li>
-                                </ul>
+                                <div class="alert alert-danger" role="alert">
+                                    {{ message }}
+                                </div>
                             {% endif %}
                         {% endfor %}
                     {% endif %}
-                    {% endwith %}
+                {% endwith %}
                 </div>
            </div>
        </div>
