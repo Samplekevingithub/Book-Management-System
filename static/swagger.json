@@ -1,0 +1,349 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "Book Management System",
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/": {
+            "get": {
+                "description": "Returns a message showing the app is up",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "The application is running"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/login": {
+            "post": {
+                "summary": "User login",
+                "description": "Endpoint to authenticate a user",
+                "parameters": [
+                    {
+                        "name": "email",
+                        "in": "formData",
+                        "description": "User email",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "password",
+                        "in": "formData",
+                        "description": "User password",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid credentials"
+                    }
+                }
+            }
+        },
+        "/logout": {
+            "get": {
+                "summary": "User logout",
+                "description": "Endpoint to log out a user",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
+            }
+        },
+        
+        "/register": {
+            "post": {
+              "summary": "User registration",
+              "description": "Endpoint to register a new user",
+              "parameters": [
+                {
+                  "name": "email",
+                  "in": "formData",
+                  "description": "User email",
+                  "required": true,
+                  "type": "string"
+                },
+                {
+                  "name": "password",
+                  "in": "formData",
+                  "description": "User password",
+                  "required": true,
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "in": "formData",
+                  "description": "User name",
+                  "required": true,
+                  "type": "string"
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Successful operation"
+                },
+                "400": {
+                  "description": "Bad request - Missing required fields or invalid data"
+                },
+                "409": {
+                  "description": "Conflict - Email already exists"
+                }
+              }
+            }
+        },
+        "/add_book": {
+            "post": {
+                "summary": "Add a new book",
+                "description": "Endpoint to add a new book to the system",
+                "parameters": [
+                    {
+                        "name": "title",
+                        "in": "formData",
+                        "description": "Title of the book",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "author",
+                        "in": "formData",
+                        "description": "Author of the book",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "published_date",
+                        "in": "formData",
+                        "description": "Published date of the book (format: YYYY-MM-DD)",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "isbn",
+                        "in": "formData",
+                        "description": "ISBN of the book",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "num_pages",
+                        "in": "formData",
+                        "description": "Number of pages in the book",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    {
+                        "name": "cover_image",
+                        "in": "formData",
+                        "description": "Cover image of the book (file upload)",
+                        "required": false,
+                        "type": "file"
+                    },
+                    {
+                        "name": "genre",
+                        "in": "formData",
+                        "description": "Genre of the book",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "publisher",
+                        "in": "formData",
+                        "description": "Publisher of the book",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "language",
+                        "in": "formData",
+                        "description": "Language of the book",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "description",
+                        "in": "formData",
+                        "description": "Description of the book",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "ratings",
+                        "in": "formData",
+                        "description": "Ratings of the book",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "400": {
+                        "description": "Bad request - Missing required fields or invalid data"
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not logged in"
+                    }
+                }
+            }
+        },
+        "/update_book": {
+            "put": {
+                "summary": "Update a book",
+                "description": "Endpoint to update an existing book in the system",
+                "parameters": [
+                    {
+                        "name": "book_id",
+                        "in": "formData",
+                        "description": "ID of the book to be updated",
+                        "required": true,
+                        "type": "integer"
+                    },
+                    {
+                        "name": "title",
+                        "in": "formData",
+                        "description": "Updated title of the book",
+                        "required": false,
+                        "type": "string"
+                    },
+                    {
+                        "name": "author",
+                        "in": "formData",
+                        "description": "Updated author of the book",
+                        "required": false,
+                        "type": "string"
+                    },
+                    {
+                        "name": "published_date",
+                        "in": "formData",
+                        "description": "Updated published date of the book (format: YYYY-MM-DD)",
+                        "required": false,
+                        "type": "string"
+                    },
+                    {
+                        "name": "isbn",
+                        "in": "formData",
+                        "description": "Updated ISBN of the book",
+                        "required": false,
+                        "type": "string"
+                    },
+                    {
+                        "name": "num_pages",
+                        "in": "formData",
+                        "description": "Updated number of pages in the book",
+                        "required": false,
+                        "type": "integer"
+                    },
+                    {
+                        "name": "cover_image",
+                        "in": "formData",
+                        "description": "Updated cover image of the book (file)",
+                        "required": false,
+                        "type": "file"
+                    },
+                    {
+                        "name": "genre",
+                        "in": "formData",
+                        "description": "Updated genre of the book",
+                        "required": false,
+                        "type": "string"
+                    },
+                    {
+                        "name": "publisher",
+                        "in": "formData",
+                        "description": "Updated publisher of the book",
+                        "required": false,
+                        "type": "string"
+                    },
+                    {
+                        "name": "language",
+                        "in": "formData",
+                        "description": "Updated language of the book",
+                        "required": false,
+                        "type": "string"
+                    },
+                    {
+                        "name": "description",
+                        "in": "formData",
+                        "description": "Updated description of the book",
+                        "required": false,
+                        "type": "string"
+                    },
+                    {
+                        "name": "ratings",
+                        "in": "formData",
+                        "description": "Updated ratings of the book",
+                        "required": false,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Book updated successfully"
+                    },
+                    "400": {
+                        "description": "Bad request - Missing required fields or invalid data"
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not logged in"
+                    },
+                    "403": {
+                        "description": "Forbidden - User not authorized to update this book"
+                    },
+                    "404": {
+                        "description": "Not found - Book not found"
+                    }
+                }
+            }
+        },
+        "/delete_book/{book_id}": {
+            "delete": {
+                "summary": "Delete a book",
+                "description": "Endpoint to delete a book from the system",
+                "parameters": [
+                    {
+                        "name": "book_id",
+                        "in": "path",
+                        "description": "ID of the book to be deleted",
+                        "required": true,
+                        "type": "integer"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Book deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not logged in"
+                    },
+                    "403": {
+                        "description": "Forbidden - User not authorized to delete this book"
+                    },
+                    "404": {
+                        "description": "Not found - Book not found"
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+   

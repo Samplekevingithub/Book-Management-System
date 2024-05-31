@@ -213,7 +213,7 @@
                         <a class="nav-link active" aria-current="page" href="/">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/create_review">Review</a>
+                        <a class="nav-link active" aria-current="page" href="/books">Book page</a>
                     </li>
                 </ul>
     
@@ -242,29 +242,30 @@
             <h2 class="section-heading">Add New Book</h2>
             <form method="POST" action="/add_book" enctype="multipart/form-data">
                 <label for="title">Title:</label>
-                <input type="text" id="title" name="title" placeholder="Enter book title">
+                <input type="text" id="title" name="title" placeholder="Enter book title" required>
                 <label for="author">Author:</label>
-                <input type="text" id="author" name="author" placeholder="Enter author name">
+                <input type="text" id="author" name="author" placeholder="Enter author name" required>
                 <label for="published_date">Published Date:</label>
-                <input type="date" id="published_date" name="published_date">
+                <input type="date" id="published_date" name="published_date" required>
                 <label for="isbn">ISBN:</label>
-                <input type="text" id="isbn" name="isbn" placeholder="Enter ISBN">
+                <input type="text" id="isbn" name="isbn" placeholder="Enter ISBN" required>
                 <label for="num_pages">Number of Pages:</label>
-                <input type="number" id="num_pages" name="num_pages" placeholder="Enter number of pages">
+                <input type="number" id="num_pages" name="num_pages" placeholder="Enter number of pages" required>
                 <label for="cover_image">Cover Image:</label>
-                <input type="file" id="cover_image" name="cover_image" placeholder="Enter cover image URL">
+                <input type="file" id="cover_image" name="cover_image" placeholder="Enter cover image URL" required>
                 <label for="genre">Genre:</label>
-                <input type="text" id="genre" name="genre" placeholder="Enter genre">
+                <input type="text" id="genre" name="genre" placeholder="Enter genre" required>
                 <label for="publisher">Publisher:</label>
-                <input type="text" id="publisher" name="publisher" placeholder="Enter publisher">
+                <input type="text" id="publisher" name="publisher" placeholder="Enter publisher" required>
                 <label for="language">Language:</label>
-                <input type="text" id="language" name="language" placeholder="Enter language">
+                <input type="text" id="language" name="language" placeholder="Enter language" required>
                 <label for="description">Description:</label>
-                <input type="text" id="description" name="description" placeholder="Enter description">
+                <input type="text" id="description" name="description" placeholder="Enter description" required>
                 <label for="ratings">Ratings:</label>
-                <input type="text" id="ratings" name="ratings" placeholder="Enter ratings">
+                <input type="text" id="ratings" name="ratings" placeholder="Enter ratings" required>
                 <button type="submit">Add Book</button>
             </form>
+            
         </div>
 
         <div class="form-container">
@@ -380,8 +381,6 @@
         {% endfor %}
     </tbody>
     </table>
-
-
     <!-- <div class="pagination-container">
             <nav>
               <ul class="pagination">
@@ -395,8 +394,9 @@
               </ul>
             </nav>
         </div> -->
-
     <script src="https://code.jquery.com/jquery-3.5.1.min.js" crossorigin="anonymous"></script>
+
+
 
 <script>
 
@@ -544,8 +544,6 @@ $(function() {
 //     getPagination('#outputTable');
 // });
 
-
-
     function addBook() {
     let title = document.getElementById("title").value;
     let author = document.getElementById("author").value;
@@ -673,7 +671,7 @@ function updateBook() {
         formData.append('cover_image', coverImageFile);
     }
     fetch('/update_book', {
-        method: 'POST',
+        method: 'PUT',
         body: formData
     })
     .then(response => response.json())
@@ -766,7 +764,7 @@ function updateBook() {
         function deleteBook(bookId) {
         // Make an AJAX request to delete the book from the server
         fetch(`/delete_book/${bookId}`, {
-            method: 'POST',
+            method: 'delete',
             headers: {
                 'Content-Type': 'application/json'
             }

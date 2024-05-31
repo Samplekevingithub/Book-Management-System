@@ -142,7 +142,6 @@
         td button:hover {
             background-color: #218838;
         }
-
     </style>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
         integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk"
@@ -164,23 +163,21 @@
                         <a class="nav-link active" aria-current="page" href="/">Home</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/books">Book page</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link active" aria-current="page" href="/create_review">Review</a>
                     </li>
                 </ul>
-                <!-- <form class="form-inline my-2 my-lg-0" id="searchForm">
-                    <input class="form-control mr-sm-2" type="search" id="searchInput" placeholder="Search"
-                        aria-label="Search">
-                    <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-                </form> -->
-                <ul class="navbar-nav ml-auto">
+                <!-- <ul class="navbar-nav ml-auto">
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="btn btn-outline-light" href="/logout">
-                            <i class="fas fa-sign-out-alt"></i> Logout ({{ current_user.name }})
+                        <a class="btn btn-outline-light" href="/login">
+                            <i class="fas fa-sign-out-alt"></i> Login 
                         </a>
                     </li>
                     {% endif %}
-                </ul>
+                </ul> -->
             </div>
         </div>
     </nav>
@@ -192,198 +189,207 @@
     <div id="formContainer">
         <div class="form-container">
             <h2 class="section-heading">Add New Review</h2>
-            <form method="POST" id="reviewForm">
-                <!-- Hidden input fields for user ID and book ID -->
-                <label for="userId">User ID:</label>
-                <input type="number" id="userId" name="userId" required>
-                <label for="bookId">Book ID:</label>
-                <input type="number" id="bookId" name="bookId" required>
-                
+            <!-- {% if not current_user.is_authenticated %}
+            <div class="login-form">
+                <h3>Login to submit a review:</h3>
+                <form id="loginForm" method="POST" action="/login">
+                    <div class="form-group">
+                        <label for="email">Email:</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <button type="submit">Login</button>
+                </form>
+            </div>
+            {% endif %} -->
+            <form id="reviewForm" method="POST" action="/create_review">
+                <input type="hidden" name="book_id" value="{{ book_id }}">
+                <input type="hidden" id="userId" name="user_id" value="{{ user_id }}">
+                <input type="hidden" id="bookId" name="book_id" value="{{ book_id }}">
                 <label for="rating">Rating:</label><br>
                 <div id="rating-container" class="rating-container">
-                    
-                    <b> 
+                    <b>
                         <span class="rating" data-value="1">★</span>
                         <span class="rating" data-value="2">★</span>
                         <span class="rating" data-value="3">★</span>
                         <span class="rating" data-value="4">★</span>
                         <span class="rating" data-value="5">★</span>
-                    </b> 
+                    </b>
                 </div>
-    
                 <label for="comment">Comment:</label>
                 <textarea id="comment" name="comment" rows="4" cols="50" required></textarea>
-    
                 <button type="submit">Submit Review</button>
             </form>
         </div>
         <div class="form-container">
-        <form id="updateReview" style="display:none;" onsubmit="event.preventDefault(); updateReview();">
-            <input type="hidden" id="reviewIdInputUpdate">
-            <label for="ratingInputUpdate">Rating:</label>
-            <input type="number" id="ratingInputUpdate">
-            <label for="commentInputUpdate">Comment:</label>
-            <textarea id="commentInputUpdate"></textarea>
-            <button type="submit">Update Review</button>
-        </form>
+            <form id="updateReview" style="display:none;" onsubmit="event.preventDefault(); updateReview();">
+                <input type="hidden" id="reviewIdInputUpdate">
+                <label for="ratingInputUpdate">Rating:</label>
+                <input type="number" id="ratingInputUpdate">
+                <label for="commentInputUpdate">Comment:</label>
+                <textarea id="commentInputUpdate"></textarea>
+                <button type="submit">Update Review</button>
+            </form>
+            </div>
     </div>
-    </div>
-    
-    <table id="outputTable">
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>User</th> <!-- Changed from User ID to User -->
-            <th>Book</th>
-            <th>Rating</th>
-            <th>Comment</th>
-            <th>Timestamp</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for review in reviews %}
-        <tr data-id="{{ review.id }}">
-            <td>{{ review.id }}</td>
-            <td>{{ review.user_id }}</td>
-            <td>{{ review.book_id }}</td>
-            <td>{{ review.rating }}</td>
-            <td>{{ review.comment }}</td>
-            <td>{{ review.timestamp }}</td>
-            <td>
-                <button onclick="deleteReview('{{ review.id }}')">Delete</button>
-                <button onclick="fillUpdateReviewForm('{{ review.id }}')">Update</button>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-    </table>
-    
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        // Form submission for adding a new review
-// Function to fetch and render reviews
-$(document).ready(function() {
-    fetchReviews(); // Page load hone par reviews fetch kare
-});
+            <table id="outputTable">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User</th> <!-- Changed from User ID to User -->
+                    <th>Book</th>
+                    <th>Rating</th>
+                    <th>Comment</th>
+                    <th>Timestamp</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for review in reviews %}
+                <tr data-id="{{ review.id }}">
+                    <td>{{ review.id }}</td>
+                    <!-- <td>{{ review.user_id }}</td> -->
+                    <!-- <td>{{ review.book_id }}</td> -->
+                    <td>{{ review.user_name }}</td>
+                    <td>{{ review.book_title }}</td>
+                    <td>{{ review.rating }}</td>
+                    <td>{{ review.comment }}</td>
+                    <td>{{ review.timestamp }}</td>
+                    <td>
+                        <button onclick="deleteReview('{{ review.id }}')">Delete</button>
+                        <button onclick="fillUpdateReviewForm('{{ review.id }}')">Update</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js" crossorigin="anonymous"></script>
+<script>
+    // Function to submit the review form
+    $(document).ready(function() {
+            fetchReviews(); // Page load hone par reviews fetch kare
+        });
 
-function fetchReviews() {
-    $.ajax({
-        type: 'GET',
-        url: '/get_reviews', 
-        success: function (response) {
-            $('#outputTable tbody').empty();
-            response.reviews.forEach(function (review) {
-                var row = $('<tr>').attr('data-id', review.id);
-                row.append($('<td>').text(review.id));   
-                row.append($('<td>').text(review.user_id));
-                row.append($('<td>').text(review.book_id));
-                row.append($('<td>').text(review.rating));
-                row.append($('<td>').text(review.comment));
-                row.append($('<td>').text(review.timestamp));
-                row.append($('<td>').html('<button onclick="deleteReview(' + review.id + ')">Delete</button><button onclick="fillUpdateReviewForm(' + review.id + ')">Update</button>'));
-                $('#outputTable tbody').append(row);
+        function fetchReviews() {
+            $.ajax({
+                type: 'GET',
+                url: '/get_reviews', 
+                success: function (response) {
+                    $('#outputTable tbody').empty();
+                    response.reviews.forEach(function (review) {
+                        var row = $('<tr>').attr('data-id', review.id);
+                        row.append($('<td>').text(review.id));   
+                        row.append($('<td>').text(review.user_name)); // Display username
+                        row.append($('<td>').text(review.book_title)); // Display book title
+                        // row.append($('<td>').text(review.user_id));
+                        // row.append($('<td>').text(review.book_id));
+                        row.append($('<td>').text(review.rating));
+                        row.append($('<td>').text(review.comment));
+                        row.append($('<td>').text(review.timestamp));
+                        row.append($('<td>').html('<button onclick="deleteReview(' + review.id + ')">Delete</button><button onclick="fillUpdateReviewForm(' + review.id + ')">Update</button>'));
+                        $('#outputTable tbody').append(row);
+                    });
+                    
+                },
+                error: function (xhr, status, error) {
+                    console.error(xhr.responseText);
+                }
             });
-
-        },
-        error: function (xhr, status, error) {
-            console.error(xhr.responseText);
         }
-    });
-}
 
-// Form submission for adding a new review
-$('#reviewForm').submit(function (event) {
-    event.preventDefault(); // Prevent default form submission
+        // Form submission for adding a new review
+        $('#reviewForm').submit(function (event) {
+            event.preventDefault(); // Prevent default form submission
 
-    var formData = {
-        user_id: $('#userId').val(),
-        book_id: $('#bookId').val(),
-        rating: $('.rating.selected').length > 0 ? $('.rating.selected').last().data('value') : null,
-        comment: $('#comment').val(),
-        timestamp: new Date().toISOString() // Get current timestamp
-    };
+            var formData = {
+                user_id: $('#userId').val(),
+                book_id: $('#bookId').val(),
+                rating: $('.rating.selected').length > 0 ? $('.rating.selected').last().data('value') : null,
+                comment: $('#comment').val(),
+                timestamp: new Date().toISOString() // Get current timestamp
+            };
 
-    // Send AJAX POST request to server
-    $.ajax({
-        type: 'POST',
-        url: '/create_review',
-        contentType: 'application/json',
-        data: JSON.stringify(formData),
-        success: function (response) {
-            // Handle success response
-            console.log(response);
-            // After successfully adding the review, fetch and render reviews again
-            fetchReviews();
-            // Clear the form fields
-            $('#userId').val('');
-            $('#bookId').val('');
-            $('.rating').removeClass('selected');
-            $('#comment').val('');
-        },
-        error: function (xhr, status, error) {
-            // Handle error response
-            var errorMessage = xhr.responseJSON.error;
-            console.error(errorMessage);
-            // Display error message to the user
-            alert(errorMessage); // You can replace this with a more user-friendly way of displaying errors
+            // Send AJAX POST request to server
+            $.ajax({
+                type: 'POST',
+                url: '/create_review',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function (response) {
+                    // Handle success response
+                    console.log(response);
+                    // After successfully adding the review, fetch and render reviews again
+                    fetchReviews();
+                    // Clear the form fields
+                    $('#userId').val('');
+                    $('#bookId').val('');
+                    $('.rating').removeClass('selected');
+                    $('#comment').val('');
+                },
+                error: function (xhr, status, error) {
+                    // Handle error response
+                    var errorMessage = xhr.responseJSON.error;
+                    console.error(errorMessage);
+                    // Display error message to the user
+                    alert(errorMessage); // You can replace this with a more user-friendly way of displaying errors
+                }
+            });
+        });
+
+    function fillUpdateReviewForm(reviewId) {
+            let row = document.querySelector(`[data-id="${reviewId}"]`);
+            let rating = row.cells[3].textContent;
+            let comment = row.cells[4].textContent;
+
+
+
+            // Populate the update form with review details
+            document.getElementById("reviewIdInputUpdate").value = reviewId;
+            document.getElementById("ratingInputUpdate").value = rating;
+            document.getElementById("commentInputUpdate").value = comment;
+
+            // Display the update form
+            document.getElementById("updateReview").style.display = "block";
         }
-    });
-});
+
+        function updateReview() {
+            let reviewId = document.getElementById("reviewIdInputUpdate").value;
+            let rating = document.getElementById("ratingInputUpdate").value;
+            let comment = document.getElementById("commentInputUpdate").value;
+
+            let formData = {
+                review_id: reviewId,
+                rating: rating,
+                comment: comment
+            };
+
+            fetch('/update_review', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Update the table row with the new values
+                let row = document.querySelector(`[data-id="${reviewId}"]`);
+                row.cells[3].textContent = rating;
+                row.cells[4].textContent = comment;
+
+                // Hide the update form after successful update
+                document.getElementById("updateReview").style.display = "none";
+            })
+            .catch(error => console.error('Error:', error));
+        }
 
 
 
-function fillUpdateReviewForm(reviewId) {
-    let row = document.querySelector(`[data-id="${reviewId}"]`);
-    let rating = row.cells[3].textContent;
-    let comment = row.cells[4].textContent;
-
-
-
-    // Populate the update form with review details
-    document.getElementById("reviewIdInputUpdate").value = reviewId;
-    document.getElementById("ratingInputUpdate").value = rating;
-    document.getElementById("commentInputUpdate").value = comment;
-
-    // Display the update form
-    document.getElementById("updateReview").style.display = "block";
-}
-
-function updateReview() {
-    let reviewId = document.getElementById("reviewIdInputUpdate").value;
-    let rating = document.getElementById("ratingInputUpdate").value;
-    let comment = document.getElementById("commentInputUpdate").value;
-
-    let formData = {
-        review_id: reviewId,
-        rating: rating,
-        comment: comment
-    };
-
-    fetch('/update_review', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Update the table row with the new values
-        let row = document.querySelector(`[data-id="${reviewId}"]`);
-        row.cells[3].textContent = rating;
-        row.cells[4].textContent = comment;
-
-        // Hide the update form after successful update
-        document.getElementById("updateReview").style.display = "none";
-    })
-    .catch(error => console.error('Error:', error));
-}
-
-
-
-function deleteReview(reviewId) {
+        function deleteReview(reviewId) {
             $.ajax({
                 type: 'POST',
                 url: '/delete_review',
@@ -401,33 +407,33 @@ function deleteReview(reviewId) {
         }
 
 </script>
-    
+
+
 <script>
-    (function() {
-        const ratingContainer = document.querySelector('.rating-container');
-
-        ratingContainer.addEventListener('click', (event) => {
-            if (event.target.classList.contains('rating')) {
-                const ratingElements = ratingContainer.querySelectorAll('.rating');
-
-                ratingElements.forEach((element) => {
-                    if (element.dataset.value <= event.target.dataset.value) {
-                        element.classList.add('selected');
-                    } else {
-                        element.classList.remove('selected');
-                    }
-                });
-
-                const ratingInput = document.getElementById('rating');
-
-                if (ratingInput) {
-                    ratingInput.value = event.target.dataset.value;
-                }
-            }
-        });
-    })();
-</script>
-
+                (function() {
+                    const ratingContainer = document.querySelector('.rating-container');
+            
+                    ratingContainer.addEventListener('click', (event) => {
+                        if (event.target.classList.contains('rating')) {
+                            const ratingElements = ratingContainer.querySelectorAll('.rating');
+            
+                            ratingElements.forEach((element) => {
+                                if (element.dataset.value <= event.target.dataset.value) {
+                                    element.classList.add('selected');
+                                } else {
+                                    element.classList.remove('selected');
+                                }
+                            });
+            
+                            const ratingInput = document.getElementById('rating');
+            
+                            if (ratingInput) {
+                                ratingInput.value = event.target.dataset.value;
+                            }
+                        }
+                    });
+                })();
+            </script>  
 </body>
 
 </html>

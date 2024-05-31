@@ -22,11 +22,25 @@ from flask_paginate import Pagination, get_page_args
 from werkzeug.utils import secure_filename
 import os
 from flask_mail import Mail, Message
+from flask_swagger_ui import get_swaggerui_blueprint
 
 app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
 
-# csrf = CSRFProtect(app)
+
+SWAGGER_URL = '/swagger'  
+API_URL = '/static/swagger.json'  
+
+# Call factory function to create our blueprint
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
+    API_URL,
+    config={  # Swagger UI config overrides
+        'app_name': "Book Management System"
+    },
+)
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+# app.register_blueprint(request_api.get_blueprint())
 app.config['JWT_SECRET_KEY'] = 'your-secret-key'  # Change this to a random secret key
 app.config['UPLOAD_FOLDER'] = 'static'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///books.db'
@@ -161,6 +175,8 @@ def loader_user(user_id):
 
 with app.app_context():
     db.create_all()
+from flask import redirect, url_for, session, request
+
 
 
 from flask import redirect, flash
@@ -174,11 +190,16 @@ def login_page():
             flash('Both email and password are required!!', 'login_error')
             return redirect(url_for('login_page'))
         user = db.session.query(User).filter_by(email=email).first()
-        
+        # message = f"User {email} login sucessfully"
+
+        # return jsonify({
+        #     "Message": message
+        # })
         if user and user.password == password:
             session['user_id'] = user.id
             access_token=create_access_token(identity=user.id)
             login_user(user)
+
             return redirect(url_for("index", message="Login successful, welcome {}!".format(user.name)))
         else:
             flash('Invalid email or password', 'login_error')
@@ -264,10 +285,22 @@ def search():
     return jsonify(search_results_json)
 
 
-@app.route('/logout')
+# @app.route('/logout')
+# def logout():
+#     logout_user()  # Remove user id from session
+#     return redirect(url_for('login_page')) 
+
+@app.route('/logout', methods=["GET", "POST"])
+@login_required
 def logout():
     logout_user()  # Remove user id from session
-    return redirect(url_for('login_page')) 
+    # message = f"User logout sucessfully"
+
+    # return jsonify({
+    #         "Message": message
+    #     })
+    return redirect(url_for('login_page'))
+
 
 @app.route('/protected', methods=['GET', 'POST'])
 @jwt_required()
@@ -282,17 +315,19 @@ def index():
     if 'user_id' in session:  # Check if user is logged in
         user_id = session['user_id']
         message = request.args.get('message')
-
+        
         # Fetch books associated with the logged-in user with pagination
         page, per_page, offset = get_page_args(page_parameter='page', per_page_parameter='per_page')
         books = db.session.query(Book).filter(Book.user_id == user_id).offset(offset).limit(per_page).all()
 
         pagination = Pagination(page=page, total=len(books), record_name='books', per_page=per_page, css_framework='bootstrap4')
-
+        
+            # return {'message': 'The application is running'}
+        
         return render_template('index.html', books=books, book=None, message=message, pagination=pagination)
     else:
         return redirect(url_for('login_page'))  # Redirect to login page if user is not logged in
-
+        
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
@@ -302,24 +337,38 @@ def uploaded_file(filename):
 def add_book():
     if 'user_id' not in session:
         return jsonify({'error': 'User not logged in'}), 401
-
+    
     # Retrieve form data
-    title = request.form['title']
-    author = request.form['author']
-    published_date_str = request.form['published_date']
-    published_date = datetime.strptime(published_date_str, '%Y-%m-%d')
-    isbn = request.form['isbn']
-    num_pages = request.form['num_pages']
+    title = request.form.get('title')
+    author = request.form.get('author')
+    published_date_str = request.form.get('published_date')
+    isbn = request.form.get('isbn')
+    num_pages = request.form.get('num_pages')
+    genre = request.form.get('genre')
+    publisher = request.form.get('publisher')
+    language = request.form.get('language')
+    description = request.form.get('description')
+    ratings = request.form.get('ratings')
 
+    # Check if any of the required fields are empty
+    if not all([title, author, published_date_str, isbn, num_pages, genre, publisher, language, description, ratings]):
+        flash('Please fill in all the required fields.', 'error')
+        return redirect(url_for('index'))
+
+    try:
+        published_date = datetime.strptime(published_date_str, '%Y-%m-%d')
+    except ValueError:
+        flash('Invalid published date format. Please use YYYY-MM-DD.', 'error')
+        return redirect(url_for('index'))
+
+    # Process cover image
     if 'cover_image' in request.files:
         cover_image = request.files['cover_image']
         if cover_image.filename != '':
-            # Ensure filename is safe
             filename = secure_filename(cover_image.filename)
             if not filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
-                # Adjust the allowed file formats as per your requirement
-                return jsonify({'error': 'Invalid file format'}), 400
-            # Save the file to the upload folder
+                flash('Invalid file format for cover image. Only JPG, JPEG, PNG, and GIF are allowed.', 'error')
+                return redirect(url_for('index'))
             cover_image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             cover_image_url = url_for('uploaded_file', filename=filename)
         else:
@@ -327,29 +376,22 @@ def add_book():
     else:
         cover_image_url = None
 
-
-    genre = request.form['genre']
-    publisher = request.form['publisher']
-    language = request.form['language']
-    description = request.form['description']
-    ratings = request.form['ratings']
-    user_id = session['user_id']  # Get the user ID from the session
-
     # Add the book to the database
     book = Book(
         title=title, author=author, published_date=published_date,
         isbn=isbn, num_pages=num_pages, cover_image_url=cover_image_url,
         genre=genre, publisher=publisher, language=language, description=description,
-        ratings=ratings, user_id=user_id
+        ratings=ratings, user_id=session['user_id']
     )
     db.session.add(book)
     db.session.commit()
     send_book_added_notification(current_user.email, title)
-    flash('Congratulations! Your book has been successfully added and send email notification.', 'success')
-    # Return the book details including the cover image URL
+    flash('Congratulations! Your book has been successfully added and an email notification has been sent.', 'success')
     return redirect(url_for('index'))
 
-@app.route('/update_book', methods=['POST'])
+
+
+@app.route('/update_book', methods=['PUT'])
 @login_required
 def update_book():
     if 'user_id' not in session:
@@ -442,7 +484,7 @@ def update_book():
     }), 200
 
 
-@app.route('/delete_book/<int:book_id>', methods=['POST'])
+@app.route('/delete_book/<int:book_id>', methods=['delete'])
 @login_required
 def delete_book(book_id):
     if 'user_id' not in session:
@@ -459,6 +501,7 @@ def delete_book(book_id):
     db.session.delete(book)
     db.session.commit()
     send_book_deleted_notification(current_user.email, title)
+    return jsonify({'success': True, 'message': 'Book delete successfully'}), 201
     return redirect(url_for('index'))
 
 def send_welcome_email(user_email):
@@ -481,6 +524,61 @@ def send_book_deleted_notification(user_email, book_title):
     msg.body = f'Dear user, You have deleted the book: {book_title}.'
     mail.send(msg)
 
+
+@app.route('/all_books')
+
+def all_books():
+    # Fetch all books from the database
+    all_books = db.session.query(Book).all()
+
+    # Convert books to a list of dictionaries
+    books_list = []
+    for book in all_books:
+        user_data = None
+        # Check if the book has a user associated with it
+        if book.user:
+            # If yes, populate user data
+            user_data = {
+                'id': book.user.id,
+                'name': book.user.name,
+                # Add more user fields if needed
+            }
+        rating_count = len(book.reviews)
+        if rating_count > 0:
+            average_rating = sum(review.rating for review in book.reviews) / rating_count
+        else:
+            average_rating = 0
+       
+        books_list.append({
+            'id': book.id,
+            'title': book.title,
+            'author': book.author,
+            'published_date': str(book.published_date),  # Convert to string if not already
+            'genre': book.genre,
+            'cover_image_url': book.cover_image_url, # Assuming this is a URL to the cover image
+            'user': user_data,
+            'rating_count': rating_count,
+            'average_rating': average_rating
+            # Add more fields if needed
+        })
+
+    # Return the list of books as JSON
+    return jsonify({'books': books_list})
+
+# @app.route('/books', methods=['GET'])
+# def render_review():
+#     return render_template('book.html')
+
+@app.route('/books', methods=['GET'])
+def render_review():
+    # Fetch all books from the database
+    book = Book.query.all()
+    
+    # Pass the books to the template
+    return render_template('book.html', book=book)
+
+
+    
 @app.route('/get_reviews')
 def get_reviews():
     reviews = Review.query.all()
@@ -489,7 +587,9 @@ def get_reviews():
         review_data.append({
             'id': review.id,
             'user_id': review.user_id,
+            'user_name': review.user.name,
             'book_id': review.book_id,
+            'book_title': review.book.title, 
             'rating': review.rating,
             'comment': review.comment,
             'timestamp': review.timestamp.strftime('%Y-%m-%d %H:%M:%S')  # Convert timestamp to string format
@@ -500,32 +600,45 @@ def get_reviews():
 @app.route('/create_review', methods=['GET'])
 @login_required
 def render_review_form():
-    return render_template('review.html')
+    book_id = request.args.get('book_id')
+    if not book_id:
+        return jsonify({'error': 'Book ID not provided'}), 400
+    user_id = request.args.get('user_id')
+    # user_id = current_user.id
+  
+    return render_template('review.html', book_id=book_id, user_id=user_id)
 
 @app.route('/create_review', methods=['POST'])
 @login_required
 def handle_review_submission():
     if 'user_id' not in session:
         return jsonify({'error': 'User not logged in'}), 401
-
     data = request.get_json()
     user_id = data.get('user_id')
+    # user_id = current_user.id 
     book_id = data.get('book_id')
     rating = int(data.get('rating')) if data.get('rating') is not None else None
     comment = data.get('comment')
     timestamp_str = data.get('timestamp')
-
-    user = db.session.query(User).get(user_id)
-    book = db.session.query(Book).get(book_id)
-
-    if not user:
-        return jsonify({'error': f"User with ID {user_id} not found"}), 404
+    book = Book.query.get(book_id)
+    user = User.query.get(user_id)
     if not book:
         return jsonify({'error': f"Book with ID {book_id} not found"}), 404
+    if not user:
+        return jsonify({'error': f"User with ID {user_id} not found"}), 404
+    # user = db.session.query(User).get(user_id)
+    # book = db.session.query(Book).get(book_id)
+
+    # if not user:
+    #     return jsonify({'error': f"User with ID {user_id} not found"}), 404
+    # if not book:
+    #     return jsonify({'error': f"Book with ID {book_id} not found"}), 404
 
     timestamp = datetime.fromisoformat(timestamp_str)
     review = Review(
         user=user,
+        user_id=user_id,
+        book_id=book_id,
         book=book,
         rating=rating,
         comment=comment,
@@ -537,14 +650,16 @@ def handle_review_submission():
 
     return jsonify({'success': 'Review created successfully'}), 200
 
-@app.route('/update_review', methods=['POST'])
+
+
+@app.route('/update_review', methods=['PUT'])
 @login_required
 def update_review():
     if 'user_id' not in session:
         return jsonify({'error': 'User not logged in'}), 401
 
-    data = request.get_json()  # Get JSON data from request body
-    review_id = data.get('review_id')  # Extract review_id from JSON data
+    # data = request.get_json()  # Get JSON data from request body
+    review_id = request.form.get('review_id')  # Extract review_id from JSON data
 
     if review_id is None:
         return jsonify({'error': 'Review ID not provided'}), 400
@@ -558,8 +673,8 @@ def update_review():
         return jsonify({'error': 'You are not authorized to update this review'}), 403
 
     # Retrieve form data
-    rating = data.get('rating')
-    comment = data.get('comment')
+    rating = request.form.get('rating')
+    comment = request.form.get('comment')
 
     # Update review fields if provided
     if rating is not None:
@@ -584,7 +699,7 @@ def update_review():
         }
     }), 200
 
-@app.route('/delete_review', methods=['POST'])
+@app.route('/delete_review', methods=['post'])
 @login_required
 def delete_review():
     if 'user_id' not in session:
@@ -808,82 +923,159 @@ if __name__ == '__main__':
 
 
 
-
-# @app.route('/update_book', methods=['POST'])
+# @app.route('/update_review', methods=['POST'])
 # @login_required
-# def update_book():
+# def update_review():
 #     if 'user_id' not in session:
 #         return jsonify({'error': 'User not logged in'}), 401
 
 #     data = request.get_json()  # Get JSON data from request body
-#     book_id = data.get('book_id')  # Extract book_id from JSON data
+#     review_id = data.get('review_id')  # Extract review_id from JSON data
 
-#     if book_id is None:
-#         return jsonify({'error': 'Book ID not provided'}), 400
+#     if review_id is None:
+#         return jsonify({'error': 'Review ID not provided'}), 400
 
-#     book = db.session.query(Book).filter(Book.id == book_id).first()
+#     review = db.session.query(Review).filter(Review.id == review_id).first()
 
-#     if book is None:
-#         return jsonify({'error': 'Book not found'}), 404
+#     if review is None:
+#         return jsonify({'error': 'Review not found'}), 404
 
-#     if book.user_id != session['user_id']:
-#         return jsonify({'error': 'You are not authorized to update this book'}), 403
+#     if review.user_id != session['user_id']:
+#         return jsonify({'error': 'You are not authorized to update this review'}), 403
 
 #     # Retrieve form data
-#     title = data.get('title')
-#     author = data.get('author')
-#     published_date_str = data.get('published_date')
-#     isbn = data.get('isbn')
-#     num_pages = data.get('num_pages')
-#     cover_image_url = data.get('cover_image_url')
-#     genre = data.get('genre')
-#     publisher = data.get('publisher')
-#     language = data.get('language')
-#     description = data.get('description')
-#     ratings = data.get('ratings')
+#     rating = data.get('rating')
+#     comment = data.get('comment')
 
-#     if title:
-#         book.title = title
-#     if author:
-#         book.author = author
-#     if published_date_str:
-#         book.published_date = datetime.strptime(published_date_str, '%Y-%m-%d')
-#     if isbn:
-#         book.isbn = isbn
-#     if num_pages:
-#         book.num_pages = num_pages
-#     if cover_image_url:
-#         book.cover_image_url = cover_image_url
-#     if genre:
-#         book.genre = genre
-#     if publisher:
-#         book.publisher = publisher
-#     if language:
-#         book.language = language
-#     if description:
-#         book.description = description
-#     if ratings:
-#         book.ratings = ratings
+#     # Update review fields if provided
+#     if rating is not None:
+#         review.rating = rating
+#     if comment:
+#         review.comment = comment
 
 #     # Commit changes to the database
 #     db.session.commit()
 
-#     # Return success response with updated book details
+#     # Return success response with updated review details
 #     return jsonify({
 #         'success': True,
-#         'message': 'Book updated successfully',
+#         'message': 'Review updated successfully',
 #         'data': {
-#             'id': book.id,
-#             'title': book.title,
-#             'author': book.author,
-#             'published_date': book.published_date.strftime('%Y-%m-%d') if book.published_date else None,
-#             'isbn': book.isbn,
-#             'num_pages': book.num_pages,
-#             'cover_image_url': book.cover_image_url,
-#             'genre': book.genre,
-#             'publisher': book.publisher,
-#             'language': book.language,
-#             'description': book.description,
-#             'ratings': book.ratings
+#             'id': review.id,
+#             'user_id': review.user_id,
+#             'book_id': review.book_id,
+#             'rating': review.rating,
+#             'comment': review.comment,
+#             'timestamp': review.timestamp.strftime('%Y-%m-%d %H:%M:%S')
 #         }
 #     }), 200
+
+# @app.route('/delete_review', methods=['POST'])
+# @login_required
+# def delete_review():
+#     if 'user_id' not in session:
+#         return jsonify({'error': 'User not logged in'}), 401
+
+#     data = request.get_json()
+#     review_id = data.get('review_id')
+
+#     if review_id is None:
+#         return jsonify({'error': 'Invalid review ID provided'}), 400
+
+#     review = db.session.query(Review).get(review_id)
+
+#     if not review:
+#         return jsonify({'error': f"Review with ID {review_id} not found"}), 404
+
+#     db.session.delete(review)
+#     db.session.commit()
+
+#     return jsonify({'success': 'Review deleted successfully'}), 200
+# @app.route('/create_review', methods=['POST'])
+# @login_required
+# def handle_review_submission():
+#     if 'user_id' not in session:
+#         return jsonify({'error': 'User not logged in'}), 401
+
+#     user_id = request.form.get('user_id')
+#     book_id = request.form.get('book_id')
+#     rating = int(request.form.get('rating')) if request.form.get('rating') is not None else None
+#     comment = request.form.get('comment')
+#     timestamp_str = request.form.get('timestamp')
+
+#     user = db.session.query(User).get(user_id)
+#     book = db.session.query(Book).get(book_id)
+
+#     if not user:
+#         return jsonify({'error': f"User with ID {user_id} not found"}), 404
+#     if not book:
+#         return jsonify({'error': f"Book with ID {book_id} not found"}), 404
+
+#     try:
+#         timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+#     except ValueError:
+#         return jsonify({'error': 'Invalid timestamp format'}), 400
+
+#     review = Review(
+#         user=user,
+#         book=book,
+#         rating=rating,
+#         comment=comment,
+#         timestamp=timestamp if timestamp else datetime.utcnow()
+#     )
+
+#     db.session.add(review)
+#     db.session.commit()
+
+#     return jsonify({'success': 'Review created successfully'}), 200
+# @app.route('/add_book', methods=['POST'])
+# @login_required
+# def add_book():
+#     if 'user_id' not in session:
+#         return jsonify({'error': 'User not logged in'}), 401
+    
+#     # Retrieve form data
+#     title = request.form['title']
+#     author = request.form['author']
+#     published_date_str = request.form['published_date']
+#     published_date = datetime.strptime(published_date_str, '%Y-%m-%d')
+#     isbn = request.form['isbn']
+#     num_pages = request.form['num_pages']
+
+#     if 'cover_image' in request.files:
+#         cover_image = request.files['cover_image']
+#         if cover_image.filename != '':
+#             # Ensure filename is safe
+#             filename = secure_filename(cover_image.filename)
+#             if not filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
+#                 # Adjust the allowed file formats as per your requirement
+#                 return jsonify({'error': 'Invalid file format'}), 400
+#             # Save the file to the upload folder
+#             cover_image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+#             cover_image_url = url_for('uploaded_file', filename=filename)
+#         else:
+#             cover_image_url = None
+#     else:
+#         cover_image_url = None
+
+
+#     genre = request.form['genre']
+#     publisher = request.form['publisher']
+#     language = request.form['language']
+#     description = request.form['description']
+#     ratings = request.form['ratings']
+#     user_id = session['user_id']  # Get the user ID from the session
+#     # Add the book to the database
+#     book = Book(
+#         title=title, author=author, published_date=published_date,
+#         isbn=isbn, num_pages=num_pages, cover_image_url=cover_image_url,
+#         genre=genre, publisher=publisher, language=language, description=description,
+#         ratings=ratings, user_id=user_id
+#     )
+#     db.session.add(book)
+#     db.session.commit()
+#     send_book_added_notification(current_user.email, title)
+#     flash('Congratulations! Your book has been successfully added and send email notification.', 'success')
+#     # return jsonify({'success': True, 'message': 'Book added successfully'}), 201
+#     # Return the book details including the cover image URL
+#     return redirect(url_for('index'))
