@@ -184,6 +184,11 @@ class ReviewType(SQLAlchemyObjectType):
 @login_manager.user_loader
 def loader_user(user_id):
     return db.session.query(User).get(user_id)
+# @login_manager.user_loader
+# def load_user(user_id):
+#     if 'admin_id' in session:
+#         return None  # Return None for admin sessions
+#     return db.session.query(User).get(user_id)
     
 with app.app_context():
     db.create_all()
@@ -231,7 +236,9 @@ def admin_login():
         email = request.form.get("email")
         password = request.form.get("password")
         admin = db.session.query(User).filter_by(email=email, is_admin=True).first()
-
+        # if admin and admin.password == password:
+        #     session['admin_id'] = admin.id
+        #     return redirect(url_for("admin_panel"))
         if admin and admin.password == password:
             session['user_id'] = admin.id
             login_user(admin)
@@ -249,6 +256,11 @@ def admin_logout():
     session.pop('user_id', None)
     flash('You have been logged out successfully.', 'success')
     return redirect(url_for('admin_login'))
+# def admin_logout():
+#     session.pop('admin_id', None)
+#     flash('You have been logged out successfully.', 'success')
+#     return redirect(url_for('admin_login'))
+
 from flask import redirect, url_for, session, request
 # Admin panel route
 from flask import flash
@@ -273,23 +285,6 @@ def admin_panel():
     total_users = db.session.query(User).filter_by(is_admin=False).count()
 
     return render_template('admin_panel.html', books_with_users=books_with_users, total_books=total_books, total_users=total_users)
-
-
-# @app.route('/admin/panel')
-# @admin_required
-# def admin_panel():
-    
-#     # Fetch all books along with the user who added each book
-#     books_with_users = db.session.query(Book, User).join(User).all()
-
-#     # Count the total number of books on the platform
-#     total_books = db.session.query(Book).count()
-
-#     # Count the total number of users on the platform
-#     total_users = db.session.query(User).count()
-
-#     return render_template('admin_panel.html', books_with_users=books_with_users, total_books=total_books, total_users=total_users)
-
 
     
 from flask import redirect, flash
@@ -870,17 +865,6 @@ class Query(ObjectType):
     def resolve_book(self, info, id):
         return db.session.query(Book).get(id)
 
-# class Query(ObjectType):
-#     reviews = graphene.List(ReviewType)
-#     users = graphene.List(UserType)
-#     def resolve_reviews(self, info):
-#         # Fetch and return all reviews from the database
-#         return db.session.query(Review).all()
-#     def resolve_users(self, info):
-#         # Fetch and return all users from the database
-#         return db.session.query(User).all()
-#     def resolve_books(self,info):
-#         return db.session.query(Book).all()
     
 class CreateReview(graphene.Mutation):
         class Arguments:
@@ -1033,4 +1017,19 @@ app.add_url_rule('/graphql', view_func=GraphQLView.as_view('graphql', schema=sch
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+# @app.route('/admin/panel')
+# @admin_required
+# def admin_panel():
+    
+#     # Fetch all books along with the user who added each book
+#     books_with_users = db.session.query(Book, User).join(User).all()
+
+#     # Count the total number of books on the platform
+#     total_books = db.session.query(Book).count()
+
+#     # Count the total number of users on the platform
+#     total_users = db.session.query(User).count()
+
+#     return render_template('admin_panel.html', books_with_users=books_with_users, total_books=total_books, total_users=total_users)
 
