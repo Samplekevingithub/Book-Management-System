@@ -29,25 +29,15 @@ app = Flask(__name__, static_url_path='/static')
 from functools import wraps
 
 # Define a decorator to restrict access to admin routes
-# def admin_required(func):
-#     @wraps(func)
-#     def decorated_view(*args, **kwargs):
-#         if not current_user.is_admin:
-#             flash('You do not have permission to access this page.', 'error')
-#             return redirect(url_for('admin_panel'))
-#         return func(*args, **kwargs)
-#     return decorated_view
 def admin_required(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash('Please log in to access this page.', 'error')
-            return redirect(url_for('admin_login'))
-        elif not current_user.is_admin:
+        if not current_user.is_admin:
             flash('You do not have permission to access this page.', 'error')
             return redirect(url_for('admin_panel'))
         return func(*args, **kwargs)
     return decorated_view
+
 SWAGGER_URL = '/swagger'  
 API_URL = '/static/swagger.json'  
 
@@ -184,107 +174,27 @@ class ReviewType(SQLAlchemyObjectType):
 @login_manager.user_loader
 def loader_user(user_id):
     return db.session.query(User).get(user_id)
-# @login_manager.user_loader
-# def load_user(user_id):
-#     if 'admin_id' in session:
-#         return None  # Return None for admin sessions
-#     return db.session.query(User).get(user_id)
     
 with app.app_context():
     db.create_all()
 
-@app.route('/admin/register', methods=["GET", "POST"])
-def admin_register():
-    if request.method == "POST":
-        # Check if the secret key matches the admin key
-        secret_key = request.form.get("admin_secret_key")
-        if secret_key == "your_admin_secret_key":
-            flash('Admin registration successful!', 'success')
-            # flash('Invalid admin secret key', 'admin_register_error')
-            return redirect(url_for('admin_login'))
-
-        # Proceed with admin registration
-        email = request.form.get("email")
-        password = request.form.get("password")
-        name = request.form.get('name')
-
-        # Check if required fields are not None
-        if not email or not password or not name:
-            flash('Please fill all required fields', 'signup_error')
-            return redirect(url_for('admin_login'))
-
-        # Check if email already exists
-        if db.session.query(User).filter_by(email=email).first():
-            flash('Email already exists', 'signup_error')
-            return redirect(url_for('admin_login'))
-
-        # Create the admin
-        admin = User(email=email, password=password, name=name, is_admin=True)
-        db.session.add(admin)
-        db.session.commit()
-
-        flash('Admin registration successful!', 'success')
-        return redirect(url_for("admin_login"))
-
-    elif request.method == "GET":
-        return render_template('admin_login.html')
-
-# Admin Login
-@app.route('/admin/login', methods=["GET", "POST"])
-def admin_login():
-    if request.method == "POST":
-        email = request.form.get("email")
-        password = request.form.get("password")
-        admin = db.session.query(User).filter_by(email=email, is_admin=True).first()
-        # if admin and admin.password == password:
-        #     session['admin_id'] = admin.id
-        #     return redirect(url_for("admin_panel"))
-        if admin and admin.password == password:
-            session['user_id'] = admin.id
-            login_user(admin)
-            return redirect(url_for("admin_panel"))
-        else:
-            flash('Invalid email or password', 'admin_login_error')
-            return redirect(url_for('admin_login'))
-
-    elif request.method == "GET":
-        return render_template('admin_login.html')
-    
-@app.route('/admin/logout')
-def admin_logout():
-    logout_user()
-    session.pop('user_id', None)
-    flash('You have been logged out successfully.', 'success')
-    return redirect(url_for('admin_login'))
-# def admin_logout():
-#     session.pop('admin_id', None)
-#     flash('You have been logged out successfully.', 'success')
-#     return redirect(url_for('admin_login'))
 
 from flask import redirect, url_for, session, request
 # Admin panel route
-from flask import flash
-
-# Admin panel route
 @app.route('/admin/panel')
-@admin_required
+
 def admin_panel():
-    # Fetch all non-admin users
-    non_admin_users = db.session.query(User).filter_by(is_admin=False).all()
-
-    # Count the total number of non-admin users on the platform
-    total_non_admin_users = len(non_admin_users)
-
     # Fetch all books along with the user who added each book
     books_with_users = db.session.query(Book, User).join(User).all()
 
     # Count the total number of books on the platform
     total_books = db.session.query(Book).count()
 
-    # Count the total number of users on the platform (excluding admins)
-    total_users = db.session.query(User).filter_by(is_admin=False).count()
+    # Count the total number of users on the platform
+    total_users = db.session.query(User).count()
 
     return render_template('admin_panel.html', books_with_users=books_with_users, total_books=total_books, total_users=total_users)
+
 
     
 from flask import redirect, flash
@@ -307,8 +217,8 @@ def login_page():
             session['user_id'] = user.id
             access_token=create_access_token(identity=user.id)
             login_user(user)
-            return redirect(url_for("admin_panel" if user.is_admin else "index"))
-            # return redirect(url_for("index", message="Login successful, welcome {}!".format(user.name)))
+
+            return redirect(url_for("index", message="Login successful, welcome {}!".format(user.name)))
         else:
             flash('Invalid email or password', 'login_error')
             return redirect(url_for('login_page'))
@@ -865,6 +775,17 @@ class Query(ObjectType):
     def resolve_book(self, info, id):
         return db.session.query(Book).get(id)
 
+# class Query(ObjectType):
+#     reviews = graphene.List(ReviewType)
+#     users = graphene.List(UserType)
+#     def resolve_reviews(self, info):
+#         # Fetch and return all reviews from the database
+#         return db.session.query(Review).all()
+#     def resolve_users(self, info):
+#         # Fetch and return all users from the database
+#         return db.session.query(User).all()
+#     def resolve_books(self,info):
+#         return db.session.query(Book).all()
     
 class CreateReview(graphene.Mutation):
         class Arguments:
@@ -1017,19 +938,4 @@ app.add_url_rule('/graphql', view_func=GraphQLView.as_view('graphql', schema=sch
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-# @app.route('/admin/panel')
-# @admin_required
-# def admin_panel():
-    
-#     # Fetch all books along with the user who added each book
-#     books_with_users = db.session.query(Book, User).join(User).all()
-
-#     # Count the total number of books on the platform
-#     total_books = db.session.query(Book).count()
-
-#     # Count the total number of users on the platform
-#     total_users = db.session.query(User).count()
-
-#     return render_template('admin_panel.html', books_with_users=books_with_users, total_books=total_books, total_users=total_users)
 
