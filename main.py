@@ -26,8 +26,28 @@ from flask_swagger_ui import get_swaggerui_blueprint
 
 app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
+from functools import wraps
 
-
+# Define a decorator to restrict access to admin routes
+# def admin_required(func):
+#     @wraps(func)
+#     def decorated_view(*args, **kwargs):
+#         if not current_user.is_admin:
+#             flash('You do not have permission to access this page.', 'error')
+#             return redirect(url_for('admin_panel'))
+#         return func(*args, **kwargs)
+#     return decorated_view
+def admin_required(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash('Please log in to access this page.', 'error')
+            return redirect(url_for('admin_login'))
+        elif not current_user.is_admin:
+            flash('You do not have permission to access this page.', 'error')
+            return redirect(url_for('admin_panel'))
+        return func(*args, **kwargs)
+    return decorated_view
 SWAGGER_URL = '/swagger'  
 API_URL = '/static/swagger.json'  
 
@@ -65,6 +85,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
     name = db.Column(db.String(120), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False) 
     reviews = relationship("Review", back_populates="user")
       # Define relationship with books
     books = relationship("Book", back_populates="user")
@@ -142,15 +163,6 @@ class BookType(SQLAlchemyObjectType):
 
     def resolve_reviews(self, info):
         return [review for review in self.reviews]
-# class BookType(SQLAlchemyObjectType):
-#     class Meta:
-#         model = Book
-#         interfaces = (graphene.relay.Node,)
-#     id = graphene.ID(description="ID of the book", required=True)
-
-#     def resolve_id(self, info):
-#         return str(self.id)
-
 
 # Update resolver functions for ReviewType
 class ReviewType(SQLAlchemyObjectType):
@@ -172,13 +184,114 @@ class ReviewType(SQLAlchemyObjectType):
 @login_manager.user_loader
 def loader_user(user_id):
     return db.session.query(User).get(user_id)
-
+    
 with app.app_context():
     db.create_all()
+
+@app.route('/admin/register', methods=["GET", "POST"])
+def admin_register():
+    if request.method == "POST":
+        # Check if the secret key matches the admin key
+        secret_key = request.form.get("admin_secret_key")
+        if secret_key == "your_admin_secret_key":
+            flash('Admin registration successful!', 'success')
+            # flash('Invalid admin secret key', 'admin_register_error')
+            return redirect(url_for('admin_login'))
+
+        # Proceed with admin registration
+        email = request.form.get("email")
+        password = request.form.get("password")
+        name = request.form.get('name')
+
+        # Check if required fields are not None
+        if not email or not password or not name:
+            flash('Please fill all required fields', 'signup_error')
+            return redirect(url_for('admin_login'))
+
+        # Check if email already exists
+        if db.session.query(User).filter_by(email=email).first():
+            flash('Email already exists', 'signup_error')
+            return redirect(url_for('admin_login'))
+
+        # Create the admin
+        admin = User(email=email, password=password, name=name, is_admin=True)
+        db.session.add(admin)
+        db.session.commit()
+
+        flash('Admin registration successful!', 'success')
+        return redirect(url_for("admin_login"))
+
+    elif request.method == "GET":
+        return render_template('admin_login.html')
+
+# Admin Login
+@app.route('/admin/login', methods=["GET", "POST"])
+def admin_login():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        admin = db.session.query(User).filter_by(email=email, is_admin=True).first()
+
+        if admin and admin.password == password:
+            session['user_id'] = admin.id
+            login_user(admin)
+            return redirect(url_for("admin_panel"))
+        else:
+            flash('Invalid email or password', 'admin_login_error')
+            return redirect(url_for('admin_login'))
+
+    elif request.method == "GET":
+        return render_template('admin_login.html')
+    
+@app.route('/admin/logout')
+def admin_logout():
+    logout_user()
+    session.pop('user_id', None)
+    flash('You have been logged out successfully.', 'success')
+    return redirect(url_for('admin_login'))
 from flask import redirect, url_for, session, request
+# Admin panel route
+from flask import flash
+
+# Admin panel route
+@app.route('/admin/panel')
+@admin_required
+def admin_panel():
+    # Fetch all non-admin users
+    non_admin_users = db.session.query(User).filter_by(is_admin=False).all()
+
+    # Count the total number of non-admin users on the platform
+    total_non_admin_users = len(non_admin_users)
+
+    # Fetch all books along with the user who added each book
+    books_with_users = db.session.query(Book, User).join(User).all()
+
+    # Count the total number of books on the platform
+    total_books = db.session.query(Book).count()
+
+    # Count the total number of users on the platform (excluding admins)
+    total_users = db.session.query(User).filter_by(is_admin=False).count()
+
+    return render_template('admin_panel.html', books_with_users=books_with_users, total_books=total_books, total_users=total_users)
 
 
+# @app.route('/admin/panel')
+# @admin_required
+# def admin_panel():
+    
+#     # Fetch all books along with the user who added each book
+#     books_with_users = db.session.query(Book, User).join(User).all()
 
+#     # Count the total number of books on the platform
+#     total_books = db.session.query(Book).count()
+
+#     # Count the total number of users on the platform
+#     total_users = db.session.query(User).count()
+
+#     return render_template('admin_panel.html', books_with_users=books_with_users, total_books=total_books, total_users=total_users)
+
+
+    
 from flask import redirect, flash
 
 @app.route('/login', methods=["GET", "POST"])
@@ -199,8 +312,8 @@ def login_page():
             session['user_id'] = user.id
             access_token=create_access_token(identity=user.id)
             login_user(user)
-
-            return redirect(url_for("index", message="Login successful, welcome {}!".format(user.name)))
+            return redirect(url_for("admin_panel" if user.is_admin else "index"))
+            # return redirect(url_for("index", message="Login successful, welcome {}!".format(user.name)))
         else:
             flash('Invalid email or password', 'login_error')
             return redirect(url_for('login_page'))
@@ -921,161 +1034,3 @@ app.add_url_rule('/graphql', view_func=GraphQLView.as_view('graphql', schema=sch
 if __name__ == '__main__':
     app.run(debug=True)
 
-
-
-# @app.route('/update_review', methods=['POST'])
-# @login_required
-# def update_review():
-#     if 'user_id' not in session:
-#         return jsonify({'error': 'User not logged in'}), 401
-
-#     data = request.get_json()  # Get JSON data from request body
-#     review_id = data.get('review_id')  # Extract review_id from JSON data
-
-#     if review_id is None:
-#         return jsonify({'error': 'Review ID not provided'}), 400
-
-#     review = db.session.query(Review).filter(Review.id == review_id).first()
-
-#     if review is None:
-#         return jsonify({'error': 'Review not found'}), 404
-
-#     if review.user_id != session['user_id']:
-#         return jsonify({'error': 'You are not authorized to update this review'}), 403
-
-#     # Retrieve form data
-#     rating = data.get('rating')
-#     comment = data.get('comment')
-
-#     # Update review fields if provided
-#     if rating is not None:
-#         review.rating = rating
-#     if comment:
-#         review.comment = comment
-
-#     # Commit changes to the database
-#     db.session.commit()
-
-#     # Return success response with updated review details
-#     return jsonify({
-#         'success': True,
-#         'message': 'Review updated successfully',
-#         'data': {
-#             'id': review.id,
-#             'user_id': review.user_id,
-#             'book_id': review.book_id,
-#             'rating': review.rating,
-#             'comment': review.comment,
-#             'timestamp': review.timestamp.strftime('%Y-%m-%d %H:%M:%S')
-#         }
-#     }), 200
-
-# @app.route('/delete_review', methods=['POST'])
-# @login_required
-# def delete_review():
-#     if 'user_id' not in session:
-#         return jsonify({'error': 'User not logged in'}), 401
-
-#     data = request.get_json()
-#     review_id = data.get('review_id')
-
-#     if review_id is None:
-#         return jsonify({'error': 'Invalid review ID provided'}), 400
-
-#     review = db.session.query(Review).get(review_id)
-
-#     if not review:
-#         return jsonify({'error': f"Review with ID {review_id} not found"}), 404
-
-#     db.session.delete(review)
-#     db.session.commit()
-
-#     return jsonify({'success': 'Review deleted successfully'}), 200
-# @app.route('/create_review', methods=['POST'])
-# @login_required
-# def handle_review_submission():
-#     if 'user_id' not in session:
-#         return jsonify({'error': 'User not logged in'}), 401
-
-#     user_id = request.form.get('user_id')
-#     book_id = request.form.get('book_id')
-#     rating = int(request.form.get('rating')) if request.form.get('rating') is not None else None
-#     comment = request.form.get('comment')
-#     timestamp_str = request.form.get('timestamp')
-
-#     user = db.session.query(User).get(user_id)
-#     book = db.session.query(Book).get(book_id)
-
-#     if not user:
-#         return jsonify({'error': f"User with ID {user_id} not found"}), 404
-#     if not book:
-#         return jsonify({'error': f"Book with ID {book_id} not found"}), 404
-
-#     try:
-#         timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
-#     except ValueError:
-#         return jsonify({'error': 'Invalid timestamp format'}), 400
-
-#     review = Review(
-#         user=user,
-#         book=book,
-#         rating=rating,
-#         comment=comment,
-#         timestamp=timestamp if timestamp else datetime.utcnow()
-#     )
-
-#     db.session.add(review)
-#     db.session.commit()
-
-#     return jsonify({'success': 'Review created successfully'}), 200
-# @app.route('/add_book', methods=['POST'])
-# @login_required
-# def add_book():
-#     if 'user_id' not in session:
-#         return jsonify({'error': 'User not logged in'}), 401
-    
-#     # Retrieve form data
-#     title = request.form['title']
-#     author = request.form['author']
-#     published_date_str = request.form['published_date']
-#     published_date = datetime.strptime(published_date_str, '%Y-%m-%d')
-#     isbn = request.form['isbn']
-#     num_pages = request.form['num_pages']
-
-#     if 'cover_image' in request.files:
-#         cover_image = request.files['cover_image']
-#         if cover_image.filename != '':
-#             # Ensure filename is safe
-#             filename = secure_filename(cover_image.filename)
-#             if not filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
-#                 # Adjust the allowed file formats as per your requirement
-#                 return jsonify({'error': 'Invalid file format'}), 400
-#             # Save the file to the upload folder
-#             cover_image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-#             cover_image_url = url_for('uploaded_file', filename=filename)
-#         else:
-#             cover_image_url = None
-#     else:
-#         cover_image_url = None
-
-
-#     genre = request.form['genre']
-#     publisher = request.form['publisher']
-#     language = request.form['language']
-#     description = request.form['description']
-#     ratings = request.form['ratings']
-#     user_id = session['user_id']  # Get the user ID from the session
-#     # Add the book to the database
-#     book = Book(
-#         title=title, author=author, published_date=published_date,
-#         isbn=isbn, num_pages=num_pages, cover_image_url=cover_image_url,
-#         genre=genre, publisher=publisher, language=language, description=description,
-#         ratings=ratings, user_id=user_id
-#     )
-#     db.session.add(book)
-#     db.session.commit()
-#     send_book_added_notification(current_user.email, title)
-#     flash('Congratulations! Your book has been successfully added and send email notification.', 'success')
-#     # return jsonify({'success': True, 'message': 'Book added successfully'}), 201
-#     # Return the book details including the cover image URL
-#     return redirect(url_for('index'))

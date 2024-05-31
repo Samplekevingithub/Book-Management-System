@@ -215,15 +215,19 @@
                     <li class="nav-item">
                         <a class="nav-link active" aria-current="page" href="/books">Book page</a>
                     </li>
+                 
                 </ul>
-    
-                <form class="form-inline my-2 my-lg-0" id="searchForm">
-                    <input class="form-control mr-sm-2" type="search" id="searchInput" placeholder="Search"
-                        aria-label="Search">
-                    <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-                </form>
-    
                 <ul class="navbar-nav ml-auto">
+                    <form class="form-inline my-2 my-lg-0" id="searchForm">
+                        <input class="form-control mr-sm-2" type="search" id="searchInput" placeholder="Search"
+                            aria-label="Search">
+                        <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+                    </form>
+                       <!-- {% if current_user.is_authenticated %} -->
+                       <!-- <li class="nav-item"  style="margin-right: 10px;">
+                        <a class="btn btn-outline-light" aria-current="page" href="/admin/panel">Admin Panel</a>
+                    </li> -->
+                    <!-- {% endif %} -->
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
                         <a class="btn btn-outline-light" href="/logout">
@@ -305,21 +309,6 @@
     <!-- </div> -->
     </div>    
     
-    <!-- <div class="container">
-        <h2>Select Number Of Rows</h2>
-        <div class="form-group">
-            <select class="form-control" name="state" id="maxRows">
-                    <option value="5000">Show ALL Rows</option>
-                <option value="5">5</option>
-                <option value="10">10</option>
-                <option value="15">15</option>
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="70">70</option>
-                <option value="100">100</option>
-            </select>
-        </div>
-    </div> -->
     <div class="pagination">
         <ol id="numbers" class="pagination-list"></ol>
     </div>
@@ -381,19 +370,6 @@
         {% endfor %}
     </tbody>
     </table>
-    <!-- <div class="pagination-container">
-            <nav>
-              <ul class="pagination">
-        
-        <li data-page="prev" >
-                                 <span> < <span class="sr-only">(current)</span></span>
-                                </li>
-    <li data-page="next" id="prev">
-                                   <span> > <span class="sr-only">(current)</span></span>
-                                </li>
-              </ul>
-            </nav>
-        </div> -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js" crossorigin="anonymous"></script>
 
 
@@ -446,104 +422,6 @@ $(function() {
         
     }
 });
-
-// $(document).ready(function() {
-//     // Pagination JavaScript code
-//     function getPagination(table) {
-//         var lastPage = 1;
-
-//         $('#maxRows').on('change', function (evt) {
-//             lastPage = 1;
-//             $('.pagination').find('li').slice(1, -1).remove();
-//             var trnum = 0;
-//             var maxRows = parseInt($(this).val());
-
-//             if (maxRows == 5000) {
-//                 $('.pagination').hide();
-//             } else {
-//                 $('.pagination').show();
-//             }
-
-//             var totalRows = $(table + ' tbody tr').length;
-//             $(table + ' tr:gt(0)').each(function () {
-//                 trnum++;
-//                 if (trnum > maxRows) {
-//                     $(this).hide();
-//                 }
-//                 if (trnum <= maxRows) {
-//                     $(this).show();
-//                 }
-//             });
-//             if (totalRows > maxRows) {
-//                 var pagenum = Math.ceil(totalRows / maxRows);
-//                 for (var i = 1; i <= pagenum;) {
-//                     $('.pagination #prev').before(
-//                         '<li data-page="' + i + '">\
-//                             <span>' + i++ + '<span class="sr-only">(current)</span></span>\
-//                         </li>'
-//                     ).show();
-//                 }
-//             }
-//             $('.pagination [data-page="1"]').addClass('active');
-//             $('.pagination li').on('click', function (evt) {
-//                 evt.stopImmediatePropagation();
-//                 evt.preventDefault();
-//                 var pageNum = $(this).attr('data-page');
-//                 var maxRows = parseInt($('#maxRows').val());
-
-//                 if (pageNum == 'prev') {
-//                     if (lastPage == 1) {
-//                         return;
-//                     }
-//                     pageNum = --lastPage;
-//                 }
-//                 if (pageNum == 'next') {
-//                     if (lastPage == $('.pagination li').length - 2) {
-//                         return;
-//                     }
-//                     pageNum = ++lastPage;
-//                 }
-
-//                 lastPage = pageNum;
-//                 var trIndex = 0;
-//                 $('.pagination li').removeClass('active');
-//                 $('.pagination [data-page="' + lastPage + '"]').addClass('active');
-//                 $(table + ' tr:gt(0)').each(function () {
-//                     trIndex++;
-//                     if (trIndex > maxRows * pageNum || trIndex <= maxRows * pageNum - maxRows) {
-//                         $(this).hide();
-//                     } else {
-//                         $(this).show();
-//                     }
-//                 });
-//             });
-//         }).val(5).change();
-
-//         function limitPagging() {
-//             if ($('.pagination li').length > 7) {
-//                 if ($('.pagination li.active').attr('data-page') <= 3) {
-//                     $('.pagination li:gt(5)').hide();
-//                     $('.pagination li:lt(5)').show();
-//                     $('.pagination [data-page="next"]').show();
-//                 }
-//                 if ($('.pagination li.active').attr('data-page') > 3) {
-//                     $('.pagination li:gt(0)').hide();
-//                     $('.pagination [data-page="next"]').show();
-//                     for (let i = (parseInt($('.pagination li.active').attr('data-page')) - 2); i <= (parseInt($('.pagination li.active').attr('data-page')) + 2); i++) {
-//                         $('.pagination [data-page="' + i + '"]').show();
-//                     }
-//                 }
-//             }
-//         }
-
-//         $('.pagination').each(function () {
-//             limitPagging();
-//         });
-//     }
-
-//     getPagination('#outputTable');
-// });
-
     function addBook() {
     let title = document.getElementById("title").value;
     let author = document.getElementById("author").value;
@@ -699,66 +577,6 @@ function updateBook() {
 }
 
 
-
-//     function updateBook() {
-//     let bookId = document.getElementById("bookIdInputUpdate").value;
-//     let title = document.getElementById("titleInputUpdate").value;
-//     let author = document.getElementById("authorInputUpdate").value;
-//     let publishedDate = document.getElementById("publishedDateInputUpdate").value;
-//     let isbn = document.getElementById("isbnInputUpdate").value;
-//     let numPages = document.getElementById("numPagesInputUpdate").value;
-//     let coverImageURL = document.getElementById("coverImageURLInputUpdate").value;
-//     let genre = document.getElementById("genreInputUpdate").value;
-//     let publisher = document.getElementById("publisherInputUpdate").value;
-//     let language = document.getElementById("languageInputUpdate").value;
-//     let description = document.getElementById("descriptionInputUpdate").value;
-//     let ratings = document.getElementById("ratingsInputUpdate").value;
-
-//     let formData = {
-//         book_id: bookId,
-//         title: title,
-//         author: author,
-//         published_date: publishedDate,
-//         isbn: isbn,
-//         num_pages: numPages,
-//         // cover_image_url: coverImageURL,
-//         cover_image: coverImageURL,
-//         genre: genre,
-//         publisher: publisher,
-//         language: language,
-//         description: description,
-//         ratings: ratings
-//     };
-
-//     fetch('/update_book', {
-//         method: 'POST',
-//         headers: {
-//             'Content-Type': 'application/json'
-//         },
-//         body: JSON.stringify(formData)
-//     })
-//     .then(response => response.json())
-//     .then(data => {
-//         // Update the table row with the new values
-//         let row = document.querySelector(`[data-id="${bookId}"]`);
-//         row.cells[1].textContent = title;
-//         row.cells[2].textContent = author;
-//         row.cells[3].textContent = publishedDate;
-//         row.cells[4].textContent = isbn;
-//         row.cells[5].textContent = numPages;
-//         row.cells[6].querySelector('img').setAttribute('src', coverImageURL);
-//         // Additional fields
-//         row.cells[7].textContent = genre;
-//         row.cells[8].textContent = publisher;
-//         row.cells[9].textContent = language;
-//         row.cells[10].textContent = description;
-//         row.cells[11].textContent = ratings;
-
-//         // Hide the update form after successful update
-//         document.getElementById("updateBookForm").style.display = "none";
-//     })
-//     .catch(error => console.error('Error:', error));
-// }
 
 
         function deleteBook(bookId) {
