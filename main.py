@@ -28,7 +28,6 @@ app = Flask(__name__)
 app = Flask(__name__, static_url_path='/static')
 from functools import wraps
 
-# Define a decorator to restrict access to admin routes
 def admin_required(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
@@ -41,17 +40,16 @@ def admin_required(func):
 SWAGGER_URL = '/swagger'  
 API_URL = '/static/swagger.json'  
 
-# Call factory function to create our blueprint
 swaggerui_blueprint = get_swaggerui_blueprint(
-    SWAGGER_URL,  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
+    SWAGGER_URL, 
     API_URL,
-    config={  # Swagger UI config overrides
+    config={ 
         'app_name': "Book Management System"
     },
 )
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
-# app.register_blueprint(request_api.get_blueprint())
-app.config['JWT_SECRET_KEY'] = 'your-secret-key'  # Change this to a random secret key
+
+app.config['JWT_SECRET_KEY'] = 'your-secret-key'   Change this to a random secret key
 app.config['UPLOAD_FOLDER'] = 'static'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///books.db'
 app.config['SECRET_KEY'] = '9494'
@@ -70,17 +68,17 @@ app.config['MAIL_DEFAULT_SENDER'] = 'your-email@example.com'
 mail = Mail(app)
 
 class User(db.Model, UserMixin):
-    __tablename__ = "user"  # <-- Update the table name to 'user'
+    __tablename__ = "user"  
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
     name = db.Column(db.String(120), nullable=False)
     is_admin = db.Column(db.Boolean, default=False) 
     reviews = relationship("Review", back_populates="user")
-      # Define relationship with books
+
     books = relationship("Book", back_populates="user")
 
-# Define SQLAlchemy models
+
 class Book(db.Model):
     __tablename__ = "books"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -96,28 +94,28 @@ class Book(db.Model):
     description = db.Column(db.String)  
     ratings = db.Column(db.Float)  
 
-    user_id = db.Column(db.Integer, ForeignKey('user.id'))  # Define user_id column and establish a ForeignKey relationship
+    user_id = db.Column(db.Integer, ForeignKey('user.id')) 
     reviews = relationship("Review", back_populates="book")
     
-    # Define relationship with User
+
     user = relationship("User", back_populates="books")
     def serialize(self):
         return {
             'id': self.id,
             'title': self.title,
             'author': self.author,
-            'published_date': self.published_date.strftime('%Y-%m-%d'),  # Format date as string
+            'published_date': self.published_date.strftime('%Y-%m-%d'), 
             'isbn': self.isbn,
             'num_pages': self.num_pages,
             'cover_image_url': self.cover_image_url,
-            'genre': self.genre,  # Serialize new fields
+            'genre': self.genre, 
             'publisher': self.publisher,
             'language': self.language,
             'description': self.description,
             'ratings': self.ratings
         }
 
-# Add this to your existing SQLAlchemy models
+
 class Review(db.Model):
     __tablename__ = "reviews"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -140,7 +138,6 @@ class UserType(SQLAlchemyObjectType):
     def resolve_id(self, info):
         return str(self.id)
 
-# Define GraphQL types
 class BookType(SQLAlchemyObjectType):
     class Meta:
         model = Book
@@ -154,21 +151,17 @@ class BookType(SQLAlchemyObjectType):
     def resolve_reviews(self, info):
         return [review for review in self.reviews]
 
-# Update resolver functions for ReviewType
 class ReviewType(SQLAlchemyObjectType):
     class Meta:
         model = Review
         interfaces = (graphene.relay.Node,)
     id = graphene.ID(description="ID of the review", required=True)
-    user = graphene.String()  # Direct link to user who left the review
-    book = graphene.String()  # Direct link to the reviewed book
-
+    user = graphene.String() 
+    book = graphene.String() 
     def resolve_user(self, info):
-        # Assuming the users are accessible via a '/users/<user_id>' endpoint
         return f"/users/{self.user_id}"
 
     def resolve_book(self, info):
-        # Assuming the books are accessible via a '/books/<book_id>' endpoint
         return f"/books/{self.book_id}"
 
 @login_manager.user_loader
@@ -180,17 +173,11 @@ with app.app_context():
 
 
 from flask import redirect, url_for, session, request
-# Admin panel route
 @app.route('/admin/panel')
 
 def admin_panel():
-    # Fetch all books along with the user who added each book
     books_with_users = db.session.query(Book, User).join(User).all()
-
-    # Count the total number of books on the platform
     total_books = db.session.query(Book).count()
-
-    # Count the total number of users on the platform
     total_users = db.session.query(User).count()
 
     return render_template('admin_panel.html', books_with_users=books_with_users, total_books=total_books, total_users=total_users)
@@ -208,11 +195,6 @@ def login_page():
             flash('Both email and password are required!!', 'login_error')
             return redirect(url_for('login_page'))
         user = db.session.query(User).filter_by(email=email).first()
-        # message = f"User {email} login sucessfully"
-
-        # return jsonify({
-        #     "Message": message
-        # })
         if user and user.password == password:
             session['user_id'] = user.id
             access_token=create_access_token(identity=user.id)
@@ -232,17 +214,14 @@ def register_page():
     password = request.form.get("password")
     name = request.form.get('name')
     
-    # Check if required fields are not None
     if not email  or not password or not name :
         flash('Please fill all required fields', 'signup_error')
         return redirect(url_for('login_page'))
 
-    # Check if name contains only letters
     if not name.isalpha():
         flash('Name must contain only letters', 'signup_error')
         return redirect(url_for('login_page'))
 
-    # Check if email already exists
     if db.session.query(User).filter_by(email=email).first():
         flash('Email already exists', 'signup_error')
         return redirect(url_for('login_page'))
@@ -251,24 +230,17 @@ def register_page():
         flash('Password is required', 'signup_error')
         return redirect(url_for('login_page'))
 
-    # Create the user
     user = User(email=email, password=password, name=name)
     db.session.add(user)
     db.session.commit()
 
     session['user_id'] = user.id
-    login_user(user)  # Automatically login user after registration
+    login_user(user) 
     send_welcome_email(email)
     flash('Registration successful!', 'success')
-    # msg = Message('Welcome to Our Books App!',
-    #               sender='kevinjagani9428@gmail.com',
-    #               recipients=[user.email])
-    # msg.body = render_template('email_templates/welcome.txt', user=user)
-    # mail.send(msg)
 
     return redirect(url_for("index"))
 
-    # Return to login page if registration fails
     flash('Please fill all required fields', 'signup_error')
     return redirect(url_for('login_page'))
 
@@ -276,75 +248,63 @@ from sqlalchemy import or_
 from flask import jsonify
 
 @app.route('/search')
-@login_required  # Restrict access to logged-in users only
+@login_required 
 def search():
     search_query = request.args.get('q')
     
-    user_id = current_user.id  # Get the ID of the logged-in user
-    # Filter the search results based on the logged-in user's ID
+    user_id = current_user.id  
 
     search_results = Book.query.filter(
         (Book.user_id == user_id) &
         (or_(
             Book.title.ilike(f'%{search_query}%'),
             Book.author.ilike(f'%{search_query}%'),
-            Book.genre.ilike(f'%{search_query}%'),  # Filter by Genre
-            Book.ratings.ilike(f'%{search_query}%'),  # Filter by Rating
-            Book.published_date.ilike(f'%{search_query}%'),  # Filter by Published Date
-            Book.language.ilike(f'%{search_query}%')  # Filter by Language
+            Book.genre.ilike(f'%{search_query}%'),  
+            Book.ratings.ilike(f'%{search_query}%'),  
+            Book.published_date.ilike(f'%{search_query}%'),  
+            Book.language.ilike(f'%{search_query}%')  
         ))
     ).all()
     if not search_results:
         return jsonify({'message': 'No results found for the given query.'}), 404   
-    # Serialize search results to JSON
     search_results_json = [book.serialize() for book in search_results]
     
-    # Return JSON response
     return jsonify(search_results_json)
 
 
-# @app.route('/logout')
-# def logout():
-#     logout_user()  # Remove user id from session
-#     return redirect(url_for('login_page')) 
+ @app.route('/logout')
+ def logout():
+     logout_user()   Remove user id from session
+     return redirect(url_for('login_page')) 
 
 @app.route('/logout', methods=["GET", "POST"])
 @login_required
 def logout():
-    logout_user()  # Remove user id from session
-    # message = f"User logout sucessfully"
-
-    # return jsonify({
-    #         "Message": message
-    #     })
+    logout_user() 
     return redirect(url_for('login_page'))
 
 
 @app.route('/protected', methods=['GET', 'POST'])
 @jwt_required()
 def protected():
-    # Access protected resources
     current_user_id = get_jwt_identity()
     return {'messege':"hello user {current_user_id}"}, 200
 
 
 @app.route('/')
 def index():
-    if 'user_id' in session:  # Check if user is logged in
+    if 'user_id' in session:  
         user_id = session['user_id']
         message = request.args.get('message')
         
-        # Fetch books associated with the logged-in user with pagination
         page, per_page, offset = get_page_args(page_parameter='page', per_page_parameter='per_page')
         books = db.session.query(Book).filter(Book.user_id == user_id).offset(offset).limit(per_page).all()
 
         pagination = Pagination(page=page, total=len(books), record_name='books', per_page=per_page, css_framework='bootstrap4')
         
-            # return {'message': 'The application is running'}
-        
         return render_template('index.html', books=books, book=None, message=message, pagination=pagination)
     else:
-        return redirect(url_for('login_page'))  # Redirect to login page if user is not logged in
+        return redirect(url_for('login_page')) 
         
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
@@ -355,8 +315,7 @@ def uploaded_file(filename):
 def add_book():
     if 'user_id' not in session:
         return jsonify({'error': 'User not logged in'}), 401
-    
-    # Retrieve form data
+
     title = request.form.get('title')
     author = request.form.get('author')
     published_date_str = request.form.get('published_date')
@@ -368,7 +327,7 @@ def add_book():
     description = request.form.get('description')
     ratings = request.form.get('ratings')
 
-    # Check if any of the required fields are empty
+     Check if any of the required fields are empty
     if not all([title, author, published_date_str, isbn, num_pages, genre, publisher, language, description, ratings]):
         flash('Please fill in all the required fields.', 'error')
         return redirect(url_for('index'))
@@ -379,7 +338,7 @@ def add_book():
         flash('Invalid published date format. Please use YYYY-MM-DD.', 'error')
         return redirect(url_for('index'))
 
-    # Process cover image
+     Process cover image
     if 'cover_image' in request.files:
         cover_image = request.files['cover_image']
         if cover_image.filename != '':
@@ -394,7 +353,7 @@ def add_book():
     else:
         cover_image_url = None
 
-    # Add the book to the database
+     Add the book to the database
     book = Book(
         title=title, author=author, published_date=published_date,
         isbn=isbn, num_pages=num_pages, cover_image_url=cover_image_url,
@@ -415,8 +374,8 @@ def update_book():
     if 'user_id' not in session:
         return jsonify({'error': 'User not logged in'}), 401
 
-    data = request.form  # Get form data from request body
-    book_id = data.get('book_id')  # Extract book_id from form data
+    data = request.form   Get form data from request body
+    book_id = data.get('book_id')   Extract book_id from form data
 
     if book_id is None:
         return jsonify({'error': 'Book ID not provided'}), 400
@@ -429,7 +388,7 @@ def update_book():
     if book.user_id != session['user_id']:
         return jsonify({'error': 'You are not authorized to update this book'}), 403
 
-    # Retrieve form data
+     Retrieve form data
     title = data.get('title')
     author = data.get('author')
     published_date_str = data.get('published_date')
@@ -437,15 +396,15 @@ def update_book():
     num_pages = data.get('num_pages')
     cover_image_url = None
 
-    # Handle image upload if present in form data
+     Handle image upload if present in form data
     if 'cover_image' in request.files:
         cover_image = request.files['cover_image']
         if cover_image.filename != '':
-            # Ensure filename is safe
+             Ensure filename is safe
             filename = secure_filename(cover_image.filename)
             if not filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
                 return jsonify({'error': 'Invalid file format'}), 400
-            # Save the file to the upload folder
+             Save the file to the upload folder
             cover_image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             cover_image_url = url_for('uploaded_file', filename=filename)
 
@@ -478,10 +437,10 @@ def update_book():
     if ratings:
         book.ratings = ratings
 
-    # Commit changes to the database
+     Commit changes to the database
     db.session.commit()
     send_book_updated_notification(current_user.email, title)
-    # Return success response with updated book details
+     Return success response with updated book details
     return jsonify({
         'success': True,
         'message': 'Book updated successfully',
@@ -546,20 +505,20 @@ def send_book_deleted_notification(user_email, book_title):
 @app.route('/all_books')
 
 def all_books():
-    # Fetch all books from the database
+     Fetch all books from the database
     all_books = db.session.query(Book).all()
 
-    # Convert books to a list of dictionaries
+     Convert books to a list of dictionaries
     books_list = []
     for book in all_books:
         user_data = None
-        # Check if the book has a user associated with it
+         Check if the book has a user associated with it
         if book.user:
-            # If yes, populate user data
+             If yes, populate user data
             user_data = {
                 'id': book.user.id,
                 'name': book.user.name,
-                # Add more user fields if needed
+                 Add more user fields if needed
             }
         rating_count = len(book.reviews)
         if rating_count > 0:
@@ -571,28 +530,28 @@ def all_books():
             'id': book.id,
             'title': book.title,
             'author': book.author,
-            'published_date': str(book.published_date),  # Convert to string if not already
+            'published_date': str(book.published_date),   Convert to string if not already
             'genre': book.genre,
-            'cover_image_url': book.cover_image_url, # Assuming this is a URL to the cover image
+            'cover_image_url': book.cover_image_url,  Assuming this is a URL to the cover image
             'user': user_data,
             'rating_count': rating_count,
             'average_rating': average_rating
-            # Add more fields if needed
+             Add more fields if needed
         })
 
-    # Return the list of books as JSON
+     Return the list of books as JSON
     return jsonify({'books': books_list})
 
-# @app.route('/books', methods=['GET'])
-# def render_review():
-#     return render_template('book.html')
+ @app.route('/books', methods=['GET'])
+ def render_review():
+     return render_template('book.html')
 
 @app.route('/books', methods=['GET'])
 def render_review():
-    # Fetch all books from the database
+     Fetch all books from the database
     book = Book.query.all()
     
-    # Pass the books to the template
+     Pass the books to the template
     return render_template('book.html', book=book)
 
 
@@ -610,7 +569,7 @@ def get_reviews():
             'book_title': review.book.title, 
             'rating': review.rating,
             'comment': review.comment,
-            'timestamp': review.timestamp.strftime('%Y-%m-%d %H:%M:%S')  # Convert timestamp to string format
+            'timestamp': review.timestamp.strftime('%Y-%m-%d %H:%M:%S')   Convert timestamp to string format
         })
     return jsonify({'reviews': review_data})
 
@@ -622,7 +581,7 @@ def render_review_form():
     if not book_id:
         return jsonify({'error': 'Book ID not provided'}), 400
     user_id = request.args.get('user_id')
-    # user_id = current_user.id
+     user_id = current_user.id
   
     return render_template('review.html', book_id=book_id, user_id=user_id)
 
@@ -633,7 +592,7 @@ def handle_review_submission():
         return jsonify({'error': 'User not logged in'}), 401
     data = request.get_json()
     user_id = data.get('user_id')
-    # user_id = current_user.id 
+     user_id = current_user.id 
     book_id = data.get('book_id')
     rating = int(data.get('rating')) if data.get('rating') is not None else None
     comment = data.get('comment')
@@ -644,13 +603,13 @@ def handle_review_submission():
         return jsonify({'error': f"Book with ID {book_id} not found"}), 404
     if not user:
         return jsonify({'error': f"User with ID {user_id} not found"}), 404
-    # user = db.session.query(User).get(user_id)
-    # book = db.session.query(Book).get(book_id)
+     user = db.session.query(User).get(user_id)
+     book = db.session.query(Book).get(book_id)
 
-    # if not user:
-    #     return jsonify({'error': f"User with ID {user_id} not found"}), 404
-    # if not book:
-    #     return jsonify({'error': f"Book with ID {book_id} not found"}), 404
+     if not user:
+         return jsonify({'error': f"User with ID {user_id} not found"}), 404
+     if not book:
+         return jsonify({'error': f"Book with ID {book_id} not found"}), 404
 
     timestamp = datetime.fromisoformat(timestamp_str)
     review = Review(
@@ -676,8 +635,8 @@ def update_review():
     if 'user_id' not in session:
         return jsonify({'error': 'User not logged in'}), 401
 
-    # data = request.get_json()  # Get JSON data from request body
-    review_id = request.form.get('review_id')  # Extract review_id from JSON data
+     data = request.get_json()   Get JSON data from request body
+    review_id = request.form.get('review_id')   Extract review_id from JSON data
 
     if review_id is None:
         return jsonify({'error': 'Review ID not provided'}), 400
@@ -690,20 +649,20 @@ def update_review():
     if review.user_id != session['user_id']:
         return jsonify({'error': 'You are not authorized to update this review'}), 403
 
-    # Retrieve form data
+     Retrieve form data
     rating = request.form.get('rating')
     comment = request.form.get('comment')
 
-    # Update review fields if provided
+     Update review fields if provided
     if rating is not None:
         review.rating = rating
     if comment:
         review.comment = comment
 
-    # Commit changes to the database
+     Commit changes to the database
     db.session.commit()
 
-    # Return success response with updated review details
+     Return success response with updated review details
     return jsonify({
         'success': True,
         'message': 'Review updated successfully',
@@ -740,21 +699,21 @@ def delete_review():
     return jsonify({'success': 'Review deleted successfully'}), 200
 
 
-# Define GraphQL queries
-# class Query(ObjectType):
-#     books = graphene.List(BookType)
-#     book = graphene.Field(BookType, id=graphene.Int())
-#     books_by_genre = graphene.List(BookType, genre=graphene.String())
+ Define GraphQL queries
+ class Query(ObjectType):
+     books = graphene.List(BookType)
+     book = graphene.Field(BookType, id=graphene.Int())
+     books_by_genre = graphene.List(BookType, genre=graphene.String())
    
 
-#     def resolve_books(self, info):
-#         return SessionLocal().query(Book).all()
+     def resolve_books(self, info):
+         return SessionLocal().query(Book).all()
 
-#     def resolve_book(self, info, id):
-#         return SessionLocal().query(Book).filter(Book.id == id).first()
+     def resolve_book(self, info, id):
+         return SessionLocal().query(Book).filter(Book.id == id).first()
 
-#     def resolve_books_by_genre(self, info, genre):
-#         return SessionLocal().query(Book).filter(Book.genre == genre).all()
+     def resolve_books_by_genre(self, info, genre):
+         return SessionLocal().query(Book).filter(Book.genre == genre).all()
 
     
 class Query(ObjectType):
@@ -775,17 +734,17 @@ class Query(ObjectType):
     def resolve_book(self, info, id):
         return db.session.query(Book).get(id)
 
-# class Query(ObjectType):
-#     reviews = graphene.List(ReviewType)
-#     users = graphene.List(UserType)
-#     def resolve_reviews(self, info):
-#         # Fetch and return all reviews from the database
-#         return db.session.query(Review).all()
-#     def resolve_users(self, info):
-#         # Fetch and return all users from the database
-#         return db.session.query(User).all()
-#     def resolve_books(self,info):
-#         return db.session.query(Book).all()
+ class Query(ObjectType):
+     reviews = graphene.List(ReviewType)
+     users = graphene.List(UserType)
+     def resolve_reviews(self, info):
+          Fetch and return all reviews from the database
+         return db.session.query(Review).all()
+     def resolve_users(self, info):
+          Fetch and return all users from the database
+         return db.session.query(User).all()
+     def resolve_books(self,info):
+         return db.session.query(Book).all()
     
 class CreateReview(graphene.Mutation):
         class Arguments:
@@ -800,17 +759,17 @@ class CreateReview(graphene.Mutation):
         def mutate(self, info, user_id, book_id, rating, comment=None, timestamp=None):
             if not 1 <= rating <= 5:
                 raise GraphQLError("Rating must be between 1 and 5")
-            # Fetch user and book objects from the database
+             Fetch user and book objects from the database
             user = db.session.query(User).get(user_id)
             book = db.session.query(Book).get(book_id)
 
-            # Validate user and book objects
+             Validate user and book objects
             if not user:
                 raise GraphQLError(f"User with ID {user_id} not found")
             if not book:
                 raise GraphQLError(f"Book with ID {book_id} not found")
 
-            # Create a new review object
+             Create a new review object
             review = Review(
                 user=user,
                 book=book,
@@ -819,7 +778,7 @@ class CreateReview(graphene.Mutation):
                 timestamp=timestamp if timestamp else datetime.utcnow()
             )
 
-            # Add the review to the database session and commit changes
+             Add the review to the database session and commit changes
             db.session.add(review)
             db.session.commit()
 
@@ -832,18 +791,18 @@ class DeleteReview(graphene.Mutation):
         success = graphene.Boolean()
 
         def mutate(self, info, reviewId):
-            # Attempt to fetch the review object
+             Attempt to fetch the review object
             review = db.session.query(Review).get(reviewId)
 
-            # Check if review exists
+             Check if review exists
             if not review:
                 raise GraphQLError(f"Review with ID {reviewId} not found")
 
-            # Delete the review
+             Delete the review
             db.session.delete(review)
             db.session.commit()
 
-            # Return success
+             Return success
             return DeleteReview(success=True)
 
 
@@ -895,7 +854,7 @@ class UpdateBook(graphene.Mutation):
         if not book:
             raise Exception(f"Book with id {id} not found")
 
-        # Update fields
+         Update fields
         book.title = title
         book.author = author
         book.published_date = published_date
@@ -924,18 +883,17 @@ class DeleteBook(graphene.Mutation):
         db.delete(book)
         db.commit()
         return DeleteBook(book=book)
-# Define GraphQL mutations
+ Define GraphQL mutations
 class Mutation(graphene.ObjectType):
     create_book = CreateBook.Field()
     update_book = UpdateBook.Field()
     delete_book = DeleteBook.Field()
     create_review = CreateReview.Field()
     delete_review = DeleteReview.Field()
-# Create GraphQL schema
+ Create GraphQL schema
 schema = Schema(query=Query,mutation=Mutation)
 
 app.add_url_rule('/graphql', view_func=GraphQLView.as_view('graphql', schema=schema, graphiql=True))
 
 if __name__ == '__main__':
     app.run(debug=True)
-

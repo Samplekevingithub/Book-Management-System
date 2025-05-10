@@ -1,9 +1,7 @@
 import requests
 
-# GraphQL endpoint
-url = 'http://127.0.0.1:5000/graphql'
+url = 'http://127.0.0.1:5000/graphql
 
-# Function to execute GraphQL queries/mutations
 def execute_query(query):
     response = requests.post(url, json={'query': query})
     if response.status_code == 200:
@@ -11,7 +9,6 @@ def execute_query(query):
     else:
         raise Exception(f'Query failed: {response.text}')
 
-# Mutation to add a new book
 def create_book(title, author, published_date, isbn, num_pages, cover_image_url):
     mutation = f'''
     mutation {{
@@ -39,7 +36,6 @@ def create_book(title, author, published_date, isbn, num_pages, cover_image_url)
     print('New book added:')
     print(result)
 
-#fatch the all book
 def fetch_books():
     query = '''
     query {
@@ -58,7 +54,6 @@ def fetch_books():
     print('List of all books:')
     print(result)
 
-#update book
 def update_book(id, title=None, author=None, published_date=None, isbn=None, num_pages=None, cover_image_url=None):
     mutation = f'''
     mutation {{
@@ -87,7 +82,6 @@ def update_book(id, title=None, author=None, published_date=None, isbn=None, num
     print('Updated book details:')
     print(result)
 
-#delete book
 def delete_book(id):
     mutation = f'''
     mutation {{
@@ -102,8 +96,6 @@ def delete_book(id):
     print('Book deleted:')
     print(result)
 
-  
-# Example usage
 if __name__ == '__main__':
     # Add a new book
     # create_book('Python Crash Course', 'Eric Matthes', '2015-11-01', '978-1-59327-603-4', 560, 'https://en.wikipedia.org/wiki/Python_(programming_language)#/media/File:Python-logo-notext.svg'),
