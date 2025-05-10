@@ -1,6 +1,6 @@
 import requests
 
-url = 'http://127.0.0.1:5000/graphql
+url = 'http://127.0.0.1:5000/graphql'
 
 def execute_query(query):
     response = requests.post(url, json={'query': query})
